@@ -26,9 +26,7 @@ class FiDT5(transformers.T5ForConditionalGeneration):
         if 'attention_mask' in kwargs:
             kwargs['attention_mask'] = kwargs['attention_mask'].view(kwargs['attention_mask'].size(0), -1)
 
-        return super(FiDT5, self).forward(
-            **kwargs
-        )
+        return super(FiDT5, self).forward(**kwargs)
 
     # We need to resize as B x (N * L) instead of (B * N) x L here
     # because the T5 forward method uses the input tensors to infer
@@ -126,9 +124,9 @@ class FiDT5(transformers.T5ForConditionalGeneration):
         scores = scores/ntokens
 
         # change to the scores
-        # scores = F.softmax(scores.float(), dim=-1).type_as(
-        #     scores
-        # )  
+        scores = F.softmax(scores.float(), dim=-1).type_as(
+            scores
+        )  
         return scores
 
     def overwrite_forward_crossattention(self):
