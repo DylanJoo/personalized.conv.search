@@ -44,3 +44,24 @@ search_hotpot_contriever:
 	    --query data/hotpotqa/flatten_hotpotqa.jsonl \
 	    --device cuda:1 \
 	    --batch_size 64
+
+evaluate:
+	/tmp2/trec/trec_eval.9.0.4/trec_eval \
+	    -c -m recall.10 data/hotpotqa/od_hotpot_train_avail.qrel \
+	    runs/hotpotqa.train.contriever.run
+
+collect_triplet:
+	python augmentation/collect_triplet.py \
+	    --flatten_qa data/hotpotqa/flatten_hotpotqa.jsonl \
+	    --run runs/hotpotqa.train.contriever.run \
+	    --corpus data/hotpotqa/passaegs.jsonl \
+	    --triplet data/ikat/hotpotqa_triplet.jsonl
+
+predict_questions:
+	python augmentation/generate_question.py \
+	    --corpus data/hotpotqa/passages.jsonl \
+	    --triplet data/ikat/hotpotqa_triplet.jsonl \
+	    --flatten_qa data/hotpotqa/flatten_hotpotqa.jsonl \
+	    --prediction data/ikat/hotpotqa_prediction.jsonl  \
+	    --model_name mrm8488/t5-base-finetuned-question-generation-ap \
+	    --device cuda:2
