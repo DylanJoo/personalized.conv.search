@@ -19,6 +19,8 @@ def generate_question(model, tokenizer, answers, docs, device='cpu'):
     # generate
     outputs = model.generate(**processed_input)
     generated_texts = tokenizer.batch_decode(outputs, skip_special_tokens=True)
+    # remove "question:"
+    generated_texts = [t.replace('question: ', "") for t in generated_texts]
     return generated_texts
 
 if __name__ == '__main__':
@@ -55,22 +57,27 @@ if __name__ == '__main__':
             # candidate docs
             positive_docids = item['positive_docids']
             negative_docids = item['negative_docids']
+            n_pos = len(positive_docids)
+            n_neg = len(negative_docids)
+
+            # transform docid to document
+            golds = [answer] * n_pos + ['<pad>'] * n_neg
+            documents = [collection[docid] \
+                    for docid in positive_docids+negative_docids]
 
             # construct the pair
             predicted_questions = generate_question(
-                    model, tokenizer, answer, 
-                    positive_docids+negative_docids,
+                    model, tokenizer, golds, documents,
                     device=args.device
             )
 
             # hard negative from contriever
-            n_pos = len(positive_docids)
-            for pred in predicted_questions:
-                fout.write(json.dumps({
-                    'qid': qid, 
-                    'question_base': question, 
-                    'positive_docids': positive_docids,
-                    'positive_context': pred[:n_pos], 
-                    'negative_docids': negative_docids,
-                    'negative_context': pred[n_pos:]
-                })+'\n')
+            fout.write(json.dumps({
+                'qid': qid, 
+                'question_base': question, 
+                'answer': answer, 
+                'positive_docids': positive_docids,
+                'positive_context': predicted_questions[:n_pos], 
+                'negative_docids': negative_docids,
+                'negative_context': predicted_questions[n_pos:]
+            })+'\n')

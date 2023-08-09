@@ -1,15 +1,17 @@
-search_ikat_train:
+# spare retrieval
+CLUEWEB=/tmp2/trec/ikat/indexes/clueweb22_ikat-lucene
+ssearch_ikat_train:
 	python3 sparse_retrieval/bm25_ikat.py \
 	    --k 100 --k1 0.9 --b 0.4 \
-	    --index /home/jhju/indexes/full_wiki_segments_lucene_tc/ \
+	    --index $CLUEWEB \
 	    --output runs/ikat.train.bm25.run \
 	    --resolved \
 	    --topic data/ikat/2023_train_topics.json
 
-search_ikat_test:
+ssearch_ikat_test:
 	python3 sparse_retrieval/bm25_ikat.py \
 	    --k 100 --k1 0.9 --b 0.4 \
-	    --index /home/jhju/indexes/full_wiki_segments_lucene_tc/ \
+	    --index $CLUEWEB \
 	    --output runs/ikat.test.bm25.run \
 	    --resolved \
 	    --topic data/ikat/2023_test_topics.json
@@ -35,7 +37,7 @@ index_hotpot_corpus_contriever:
 	    --fp16 \
 	    --device cuda:2
 
-search_hotpot_contriever:
+dsearch_hotpot_train:
 	python dense_retrieval/search.py \
 	    --k 200 \
 	    --output runs/hotpotqa.train.contriever.run  \
@@ -65,3 +67,38 @@ predict_questions:
 	    --prediction data/ikat/hotpotqa_prediction.jsonl  \
 	    --model_name mrm8488/t5-base-finetuned-question-generation-ap \
 	    --device cuda:2
+
+dsearch_qrecc_train: 
+	python3 dense_retrieval/search.py \
+	    --k 10  \
+	    --index /tmp2/trec/ikat/indexes/wikipedia-contriever/ \
+	    --output runs/qrecc.train.contriever.rewrite.run \
+	    --encoder_path /tmp2/trec/pds/retrievers/contriever-msmarco/ \
+	    --query data/qrecc/qrecc_train.json \
+	    --device cuda:2 \
+	    --batch_size 64 
+
+dsearch_ikat_train: 
+	# use for response generation
+	# use resolved question
+	python3 dense_retrieval/search.py \
+	    --k 100  \
+	    --index /tmp2/trec/ikat/indexes/wiki-contriever/ \
+	    --output runs/ikat.train.contriever.resolved.run \
+	    --encoder_path /tmp2/trec/pds/retrievers/contriever-msmarco/ \
+	    --query data/ikat/2023_train_topics.json \
+	    --device cuda:2 \
+	    --batch_size 64 \
+	    --resolved
+	
+	# use ptkb 
+	python3 dense_retrieval/search.py \
+	    --k 100  \
+	    --index /tmp2/trec/ikat/indexes/msmarco-contriever/ \
+	    --output runs/ikat.train.contriever.resolved+ptkb.run \
+	    --encoder_path /tmp2/trec/pds/retrievers/contriever-msmarco/ \
+	    --query data/ikat/2023_train_topics.json \
+	    --device cuda:2 \
+	    --batch_size 64 \
+	    --resolved \
+	    --concat_ptkb
