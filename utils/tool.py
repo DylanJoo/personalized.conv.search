@@ -103,8 +103,11 @@ def load_collection(path, append=False, key='title'):
     if path.endswith('tsv'):
         for line in tqdm(fi):
             if 'wiki' in path.lower():
-                doc_id, title, content = line.strip().split('\t')
-                content = f"{title} [SEP] {content}"
+                doc_id, content, title = line.strip().split('\t')
+                content = content.strip()
+                title = title.strip()
+                if append:
+                    content = f"{title} {append} {content}"
             else:
                 doc_id, content = line.strip().split('\t')
             data[str(doc_id)] = content
