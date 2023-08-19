@@ -102,3 +102,16 @@ dsearch_ikat_train:
 	    --batch_size 64 \
 	    --resolved \
 	    --concat_ptkb
+
+construct_star_train:
+	python3 augmentation/postprocess_ctx_qp_pairs.py \
+    		--input_jsonl data/star/llama.qrecc.statements.jsonl \
+     		--output_jsonl data/star/train.jsonl 
+	# Consistenct filter
+	# python3 augmentation/postprocess_ctx_qp_pairs.py \
+    	# 	--input_jsonl \
+     	# 	--output_jsonl \
+     	# 	--filtering \
+     	# 	--filter_model str \
+     	# 	--filter_k int \
+     	# 	--filter_thres float 

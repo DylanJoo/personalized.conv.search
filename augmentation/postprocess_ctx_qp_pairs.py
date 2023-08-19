@@ -4,10 +4,20 @@ import json
 import argparse
 from tool import load_collection
 
-def extract_statement(text):
-    pass
+def extract_statement(texts):
+    texts = re.sub("[1]\;", "", texts)
+    statements = texts.split(';')
+    statements = [s.strip() for s in statements if len(s) >= 10]
+    return statements
 
 def consistency_filter(statements, document, model_name_or_path):
+    """ this stage aims to filter the high-quality statements; 
+    such statements may include the relevant one or non-relevant one.
+
+    Method:
+    [1] leverage the NLI model to achieve.
+    [2] ...
+    """
     texts = [f"Query: {} {}"]
     pass
 
@@ -18,8 +28,9 @@ if __name__ == '__main__':
 
     # filtering
     parser.add_argument("--filtering", default=False, action='store_true')
+    parser.add_argument("--filter_model", default=None, type=str)
     parser.add_argument("--filter_k", default=10, type=int)
-    parser.add_argument("--filter_thres", default=float, type=int)
+    parser.add_argument("--filter_thres", default=0.9, type=float)
     args = parser.parse_args()
 
     # load data
@@ -35,14 +46,16 @@ if __name__ == '__main__':
             # Generated statements
             ## extract 
             statements = extract_statement(item['llm_generated_text'])
+
             ## filter
             if args.filtering:
-                statements = consistency_filter(statements)
-            ## write
+                statements = consistency_filter(query, statements)
+
             for statement in statements:
                 fout.write(json.dumps({
-                    "query": 0,
-                    "statement": 1,
-                    "passage": 2,
+                    "query": query,
+                    "statement": statement,
+                    "passage": document,
                 }, ensure_ascii=False)+'\n')
+
     print("Done")

@@ -1,6 +1,5 @@
 **/__pycache__/
 **/runs/
-data/hotpotqa/
-data/ikat/
-data/qrecc/
+data/
 archived/
+**/*.swp

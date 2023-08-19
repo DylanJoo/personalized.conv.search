@@ -50,8 +50,7 @@ def main():
 
     # Data
     ## Dataset
-    from data import nils
-    dataset = nils.passage_centric_dataset(data_args.train_file)
+    dataset = load_dataset('json', data_files=args.)
     n_examples = len(dataset['train'])
 
     # Trainer
