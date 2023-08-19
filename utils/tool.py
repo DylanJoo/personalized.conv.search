@@ -97,11 +97,11 @@ def load_runs(path, output_score=False): # support .trec file only
 
     return sorted_run_dict
 
-def load_collection(path, append=False, key='title'):
+def load_collection(path, append=False, key='title', full=True):
     data = collections.defaultdict(str)
     fi = open(path, 'r')
     if path.endswith('tsv'):
-        for line in tqdm(fi):
+        for i, line in enumerate(tqdm(fi)):
             if 'wiki' in path.lower():
                 doc_id, content, title = line.strip().split('\t')
                 content = content.strip()
@@ -111,6 +111,9 @@ def load_collection(path, append=False, key='title'):
             else:
                 doc_id, content = line.strip().split('\t')
             data[str(doc_id)] = content
+
+            if (full is False) and (i > 10000):
+                break
     else:
         for line in tqdm(fi):
             item = json.loads(line.strip())

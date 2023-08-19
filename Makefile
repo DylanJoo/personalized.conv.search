@@ -105,6 +105,7 @@ dsearch_ikat_train:
 
 construct_star_train:
 	python3 augmentation/postprocess_ctx_qp_pairs.py \
+    		--collection /tmp2/trec/ikat/data/collection/wiki/wiki_psgs_w100.tsv  \
     		--input_jsonl data/star/llama.qrecc.statements.jsonl \
      		--output_jsonl data/star/train.jsonl 
 	# Consistenct filter
