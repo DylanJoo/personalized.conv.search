@@ -7,6 +7,7 @@ from tool import load_collection
 
 def extract_statement(texts):
     texts = re.sub("[1]\;", "", texts)
+    texts = re.sub("[Bb]ackground [0-9]*\:", ";", texts)
     statements = texts.split(';')
     statements = [s.strip() for s in statements if len(s) >= 10]
     return statements
