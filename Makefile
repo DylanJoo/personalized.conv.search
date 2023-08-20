@@ -139,4 +139,4 @@ train_start_gtr:
 	        --do_eval \
 	        --optim adafactor \
 	        --temperature 0.25 \
-	        --report_to wandb
+	        --alpha 0.1 

@@ -41,23 +41,21 @@ class GTREncoder(T5EncoderModel):
             # [NOTE] To simplify the PoC, this is deprecated so far.
             d_output = self.forward(**p_inputs)
             D = self.mean_pooling(d_output, p_inputs['attention_mask'])
+            D = self.linear(D)
 
         ## query embeddings
         q_output = self.forward(**q_inputs)
         Q = self.mean_pooling(q_output, q_inputs['attention_mask'])
+        Q = self.linear(Q)
 
         ## statement-awared query embeddings
         qs_output = self.forward(**qs_inputs)
         QS = self.mean_pooling(qs_output, qs_inputs['attention_mask'])
+        QS = self.linear(QS)
 
         ## query-passage relevance logits
         qp_logits = Q @ D.transpose(0, 1)
         qsp_logits = QS @ D.transpose(0, 1)
-        # labels = torch.eye(logits_q.size(0), device=self.device)
-        # loss_qqs = loss(logits_q, labels) + loss(logits_qs, labels)
-
-        # labels = torch.tensor([[0, 1]]*logits_q.size(0), device=self.device)
-        # loss_diag = loss(logits_diag, labels)
 
         return {'qp_logits': qp_logits, 'qsp_logits': qsp_logits}
 

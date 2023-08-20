@@ -1,5 +1,5 @@
 import torch
-from typing import Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import torch.nn as nn
 from transformers import Trainer, PreTrainedModel
 from loss import InBatchNegativeCELoss as info_nce
@@ -17,13 +17,12 @@ class TrainerForStart(Trainer):
         super().__init__(**kwargs)
         self.alpha = self.args.alpha
 
-    def compute_loss(self, model, inputs, return_outputs=False):
-        # the label is constructed by InfoNCE, so no `label`
-        q_inputs, qs_inputs, p_inputs = inputs
-
+    def compute_loss(self, model, batch, return_outputs=False):
         # forward triplet and get logits
         outputs = model.forward_start(
-                q_inputs, qs_inputs, p_inputs, 
+                batch['q_inputs'], 
+                batch['qs_inputs'],
+                batch['p_inputs'],
                 document_encoder=self.document_encoder
         )
 
@@ -31,10 +30,11 @@ class TrainerForStart(Trainer):
         ## 1) InfoNCE loss for dense retrieval
         qp_logits = outputs['qp_logits'] / self.temperature
         qsp_logits = outputs['qsp_logits'] / self.temperature
-        ### testing
-        m = nn.Softmax(dim=-1)
-        print(m(qp_logits)[0:3, 0:3])
-        print(m(qsp_logits)[0:3, 0:3])
+
+        ### [DEBUG] testing
+        # m = nn.Softmax(dim=-1)
+        # print(m(qp_logits)[0:3, 0:3])
+        # print(m(qsp_logits)[0:3, 0:3])
 
         loss_rt = info_nce(qp_logits) + info_nce(qsp_logits)
 
@@ -53,4 +53,3 @@ class TrainerForStart(Trainer):
             self._past = outputs[self.args.past_index]
 
         return (loss, outputs) if return_outputs else loss
-

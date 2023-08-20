@@ -51,7 +51,10 @@ class DataCollatorForCtxRetriever:
                 return_tensors='pt'
         )
         
-        return q_inputs, qs_inputs, p_inputs
+        return {'q_inputs': q_inputs, 
+                'qs_inputs': qs_inputs,
+                'p_inputs': p_inputs, 
+                'return_loss': True}
 
 # class QReCC:
 #
