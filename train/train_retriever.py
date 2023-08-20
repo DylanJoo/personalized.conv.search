@@ -1,68 +1,67 @@
-import os
 import sys
-from typing import Optional, Union
+import multiprocessing
 from transformers import (
-    HfArgumentParser,
-    DataCollatorForSeq2Seq
-)
-from transformers import (
-    T5ForConditionalGeneration,
+    AutoConfig,
     AutoTokenizer,
-    AutoConfig
+    Trainer,
+    HfArgumentParser,
+    GenerationConfig
 )
 from datasets import load_dataset
-from arguments import ModelArgs, DataArgs, TrainArgs
+# customized packages
+from data import DataCollatorForCtxRetriever
+from models import GTREncoder
+from arguments import *
 
+import os
 os.environ["WANDB_DISABLED"] = "false"
 
-
 def main():
-    parser = HfArgumentParser((ModelArgs, DataArgs, TrainArgs))
+    # Parse argument for huggingface packages
+    parser = HfArgumentParser((ModelArgs, DataArgs, TrainingArgs))
+
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         model_args, data_args, training_args = \
                 parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
     else:
-        model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+        model_args, data_args, training_args = \
+                parser.parse_args_into_dataclasses()
 
-    # Config and Tokenizer 
-    config = AutoConfig.from_pretrained(model_args.config_name)
+    # Preparation 
+    # (tokenizer, prompt indices)
     tokenizer = AutoTokenizer.from_pretrained(model_args.tokenizer_name)
 
     # Model
-    # backbone and pretrained 
-    model = T5ForConditionalGeneration.from_pretrained(model_args.model_name_or_path)
-    
+    model = GTREncoder.from_pretrained(model_args.model_name_or_path)
+
+    # Generation config
+    generation_config = GenerationConfig.from_model_config(model.config)
+    model.generation_config = generation_config
+
     # Data
-    # collator/preprocessor
-    from datacollator import DataCollatorForDesc2Title, DataCollatorForProduct2Query
-    datacollator_class_map = {
-            "desc2title": DataCollatorForDesc2Title,
-            "product2query": DataCollatorForProduct2Query
-    }
-    for key in datacollator_class_map:
-        if key in training_args.output_dir:
-            data_collator = datacollator_class_map[key](
-                    tokenizer=tokenizer,
-                    max_src_length=data_args.max_src_length,
-                    max_tgt_length=data_args.max_tgt_length,
-            )
+    ## Datacollator
+    data_collator = DataCollatorForCtxRetriever(
+            tokenizer=tokenizer, 
+            max_p_length=data_args.max_p_length,
+            max_q_length=data_args.max_q_length,
+            truncation=True,
+            padding=True,
+    )
 
-    # Data: dataset
-    dataset = load_dataset(
-            'json', data_files=data_args.train_file
-    )['train'].train_test_split(test_size=0.0001)
-    dataset_train = dataset['train']
-    dataset_eval = dataset['test']
+    # Data
+    ## Dataset
+    dataset = load_dataset('json', data_files=data_args.train_file)
+    n_examples = len(dataset['train'])
 
-    trainer = Seq2SeqTrainer(
+    # Trainer
+    trainer = Trainer(
             model=model, 
             args=training_args,
-            train_dataset=dataset_train,
-            eval_dataset=dataset_eval,
+            train_dataset=dataset['train'],
+            eval_dataset=dataset['test'],
             data_collator=data_collator,
     )
     
-    # ***** strat training *****
     results = trainer.train(
             resume_from_checkpoint=training_args.resume_from_checkpoint
     )
