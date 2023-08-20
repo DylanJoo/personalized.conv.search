@@ -53,7 +53,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # load data
-    collection = load_collection(args.collection, full=False)
+    collection = load_collection(args.collection, full=True)
     fout = open(args.output_jsonl, 'w') 
 
     # filtering

@@ -25,20 +25,19 @@ class DataCollatorForCtxRetriever:
             statements.append(batch['statement'])
             passages.append(batch['passage'])
 
-
         # query and statement-awared query
         q_inputs = self.tokenizer(
                 queries,
                 max_length=self.max_q_length,
                 truncation=self.truncation,
-                padding=self.truncation,
+                padding=self.padding,
                 return_tensors='pt'
         )
         qs_inputs = self.tokenizer(
                 [f"{q} </s> {s}" for q, s in zip(queries, statements)],
                 max_length=self.max_q_length,
                 truncation=self.truncation,
-                padding=self.truncation,
+                padding=self.padding,
                 return_tensors='pt'
         )
 
@@ -47,8 +46,8 @@ class DataCollatorForCtxRetriever:
         p_inputs = self.tokenizer(
                 passages,
                 max_length=self.max_p_length,
-                truncation=True,
-                padding=True,
+                truncation=self.truncation,
+                padding=self.padding,
                 return_tensors='pt'
         )
         

@@ -47,26 +47,26 @@ dsearch_hotpot_train:
 	    --device cuda:1 \
 	    --batch_size 64
 
-evaluate:
-	/tmp2/trec/trec_eval.9.0.4/trec_eval \
-	    -c -m recall.10 data/hotpotqa/od_hotpot_train_avail.qrel \
-	    runs/hotpotqa.train.contriever.run
+# evaluate_hotpot:
+# 	/tmp2/trec/trec_eval.9.0.4/trec_eval \
+# 	    -c -m recall.10 data/hotpotqa/od_hotpot_train_avail.qrel \
+# 	    runs/hotpotqa.train.contriever.run
 
-collect_triplet:
-	python augmentation/collect_triplet.py \
-	    --flatten_qa data/hotpotqa/flatten_hotpotqa.jsonl \
-	    --run runs/hotpotqa.train.contriever.run \
-	    --corpus data/hotpotqa/passaegs.jsonl \
-	    --triplet data/ikat/hotpotqa_triplet.jsonl
+# collect_triplet:
+# 	python augmentation/collect_triplet.py \
+# 	    --flatten_qa data/hotpotqa/flatten_hotpotqa.jsonl \
+# 	    --run runs/hotpotqa.train.contriever.run \
+# 	    --corpus data/hotpotqa/passaegs.jsonl \
+# 	    --triplet data/ikat/hotpotqa_triplet.jsonl
 
-predict_questions:
-	python augmentation/generate_question.py \
-	    --corpus data/hotpotqa/passages.jsonl \
-	    --triplet data/ikat/hotpotqa_triplet.jsonl \
-	    --flatten_qa data/hotpotqa/flatten_hotpotqa.jsonl \
-	    --prediction data/ikat/hotpotqa_prediction.jsonl  \
-	    --model_name mrm8488/t5-base-finetuned-question-generation-ap \
-	    --device cuda:2
+# predict_questions:
+# 	python augmentation/generate_question.py \
+# 	    --corpus data/hotpotqa/passages.jsonl \
+# 	    --triplet data/ikat/hotpotqa_triplet.jsonl \
+# 	    --flatten_qa data/hotpotqa/flatten_hotpotqa.jsonl \
+# 	    --prediction data/ikat/hotpotqa_prediction.jsonl  \
+# 	    --model_name mrm8488/t5-base-finetuned-question-generation-ap \
+# 	    --device cuda:2
 
 dsearch_qrecc_train: 
 	python3 dense_retrieval/search.py \
@@ -103,11 +103,11 @@ dsearch_ikat_train:
 	    --resolved \
 	    --concat_ptkb
 
-construct_star_train:
+construct_start_train:
 	python3 augmentation/postprocess_ctx_qp_pairs.py \
     		--collection /tmp2/trec/ikat/data/collection/wiki/wiki_psgs_w100.tsv  \
-    		--input_jsonl data/star/llama.qrecc.statements.jsonl \
-     		--output_jsonl data/star/train.jsonl 
+    		--input_jsonl /home/jhju/huggingface_hub/START/train.unprocessed.jsonl \
+     		--output_jsonl data/start/train.jsonl 
 	# Consistenct filter
 	# python3 augmentation/postprocess_ctx_qp_pairs.py \
     	# 	--input_jsonl \
@@ -116,3 +116,27 @@ construct_star_train:
      	# 	--filter_model str \
      	# 	--filter_k int \
      	# 	--filter_thres float 
+
+MODEL=DylanJHJ/gtr-t5-base
+export CUDA_VISIBLE_DEVICES=2
+train_start_gtr:
+	python3 train/train_retriever.py \
+     		--model_name_or_path ${MODEL} \
+		--tokenizer_name ${MODEL} \
+     		--train_file data/start/train.jsonl \
+		--config_name ${MODEL} \
+		--output_dir models/ckpt/start-base-B160 \
+	        --max_p_length 256 \
+	        --max_q_length 64 \
+	        --per_device_train_batch_size 160 \
+	        --learning_rate 1e-5 \
+	        --evaluation_strategy steps \
+	        --max_steps 20000 \
+	        --save_steps 5000 \
+	        --eval_steps 500 \
+	        --freeze_document_encoder true \
+	        --do_train \
+	        --do_eval \
+	        --optim adafactor \
+	        --temperature 0.25 \
+	        --report_to wandb

@@ -1,7 +1,7 @@
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import Optional, Union
+from typing import Optional, Union, List
 from transformers import TrainingArguments
 
 @dataclass
@@ -12,6 +12,7 @@ class ModelArgs:
     cache_dir: Optional[str] = field(default=None)
     use_fast_tokenizer: bool = field(default=True)
     use_auth_token: bool = field(default=False)
+    temperature: Optional[float] = field(default=1)
 
 @dataclass
 class DataArgs:
@@ -20,8 +21,8 @@ class DataArgs:
     preprocessing_num_workers: Optional[int] = field(default=None)
     train_file: Optional[str] = field(default=None)
     eval_file: Optional[str] = field(default=None)
-    max_src_length: int = field(default=256)
-    max_tgt_length: int = field(default=16)
+    max_p_length: int = field(default=512)
+    max_q_length: int = field(default=128)
 
 @dataclass
 class TrainArgs(TrainingArguments):
@@ -41,3 +42,6 @@ class TrainArgs(TrainingArguments):
     save_total_limit: Optional[int] = field(default=5)
     learning_rate: Union[float] = field(default=1e-5)
     remove_unused_columns: bool = field(default=False)
+    freeze_document_encoder: bool = field(default=True)
+    report_to: Optional[List[str]] = field(default=None)
+    alpha: Union[float] = field(default=0)
