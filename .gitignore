@@ -5,3 +5,4 @@ archived/
 **/*.swp
 wandb/
 logs/
+**/ckpt/
