@@ -45,3 +45,5 @@ class TrainArgs(TrainingArguments):
     freeze_document_encoder: bool = field(default=True)
     report_to: Optional[List[str]] = field(default=None)
     alpha: Union[float] = field(default=0)
+    warmup_steps: int = field(default=0)
+

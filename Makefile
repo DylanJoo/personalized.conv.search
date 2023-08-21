@@ -161,6 +161,7 @@ train_start_contriever:
 	        --freeze_document_encoder true \
 	        --do_train \
 	        --do_eval \
-	        --optim adafactor \
+	        --optim adamw_hf \
+	        --warmup_steps 800 \
 	        --temperature 0.25 \
 	        --alpha 0.1 

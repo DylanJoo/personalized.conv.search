@@ -47,7 +47,9 @@ class FiDT5(T5ForConditionalGeneration):
 
 class FiDT5Stack(T5Stack):
 
-    def forward(self, input_ids, attention_mask, context_embeds=None, **kwargs):
+    def forward(self, 
+                input_ids, attention_mask, 
+                past_key_values=None, **kwargs):
         """ Wrap/unwrap input/ouput with this class (replace t5-encoder) 
 
         :param input_ids: the tokenized input ids with shape (BN, L)
@@ -69,15 +71,17 @@ class FiDT5Stack(T5Stack):
         ## transform from original batch into enuemrated batch.
         ## i.e. from (B, N, L) to (BN, L) 
         input_ids = input_ids.view(B*N, -1)
-
         ## For `attention_mask`, 
         ## transform from original batch into enuemrated batch.
         ## i.e. from (B, NL) to (BN, L) 
         attention_mask = attention_mask.view(B*N, -1)
 
+        # Minor modifying
+        ## Prefix tuning at decoder. Avoid `past_key_value` being considered.
         encoder_outputs = super().forward(
-                input_ids=None,
+                input_ids=input_ids,
                 attention_mask=attention_mask, 
+                past_key_values=None,
                 **kwargs
         )
 
@@ -86,13 +90,6 @@ class FiDT5Stack(T5Stack):
         ## I.e. from (BN, L, H) to (B, NL, H) 
         encoder_outputs['last_hidden_state'] = \
                 encoder_outputs['last_hidden_state'].view(B, N*L, -1)
-
-        # Modifying 3
-        ## Appending the context embeddings before
-        if context_embeds:
-            pass
-        else:
-            pass
 
         return encoder_outputs
 
