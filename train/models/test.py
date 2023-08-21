@@ -1,31 +1,23 @@
-import torch
-from transformers import (
-    T5ForConditionalGeneration,
-    T5Config
-)
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.nn import CrossEntropyLoss
+from transformers import T5ForConditionalGeneration
 from typing import Optional, Tuple, Union
+import torch
+from torch import nn
+from torch.nn import CrossEntropyLoss
+from torch.utils.checkpoint import checkpoint
 from transformers.modeling_outputs import (
+    BaseModelOutput,
+    BaseModelOutputWithPastAndCrossAttentions,
     Seq2SeqLMOutput,
-    BaseModelOutput
+    Seq2SeqModelOutput,
 )
-from transformers.models.t5.modeling_t5 import T5Stack
 
-class FiDT5(T5ForConditionalGeneration):
+class t5(T5ForConditionalGeneration):
 
-    @staticmethod
-    def unwrap_inputs(tensors, first_dim_size=1):
-        dims = tensors.shape
-        return tensors.view(first_dim_size, -1, dims[-2], dims[-1])
-
-    def forward(
+ def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,
         attention_mask: Optional[torch.FloatTensor] = None,
         decoder_input_ids: Optional[torch.LongTensor] = None,
-        n_passages: Optional[int] = None,
         decoder_attention_mask: Optional[torch.BoolTensor] = None,
         head_mask: Optional[torch.FloatTensor] = None,
         decoder_head_mask: Optional[torch.FloatTensor] = None,
@@ -40,7 +32,6 @@ class FiDT5(T5ForConditionalGeneration):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[torch.FloatTensor], Seq2SeqLMOutput]:
-
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -52,16 +43,8 @@ class FiDT5(T5ForConditionalGeneration):
 
         # Encode if needed (training, first prediction pass)
         if encoder_outputs is None:
-            """ Collect batches of input into batches x n_passages input.
-            Follow the original repo, unwarping the input into the new-batch (batch x n)
-
-            :param: `input` and `attention_mask` [B N L H]
-            """
-            input_ids = self.unwrap_inputs(input_ids, n_passages)
-            attention_mask = self.unwrap_inputs(attention_mask, n_passages)
-            inputs_embeds = None
-
             # Convert encoder inputs in embeddings if needed
+            print('pkv', past_key_values)
             encoder_outputs = self.encoder(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
@@ -99,11 +82,25 @@ class FiDT5(T5ForConditionalGeneration):
                 decoder_attention_mask = decoder_attention_mask.to(self.decoder.first_device)
 
         # Decode
+        try: 
+            cross_kv = past_key_values[0][-1]
+            rand = torch.rand(cross_kv.shape, device=cross_kv.device)
+            rand = torch.mean(rand, dim=-2).unsqueeze(-2)
+            past_key_values_new = [ 
+                    (past_key_values[l][:2] + (rand, rand)) \
+                            for l in range(self.config.num_layers)
+            ]
+            past_key_values_new = tuple(past_key_values_new)
+            print('1')
+        except:
+            past_key_values_new = past_key_values
+            print('2')
+
         decoder_outputs = self.decoder(
             input_ids=decoder_input_ids,
             attention_mask=decoder_attention_mask,
             inputs_embeds=decoder_inputs_embeds,
-            past_key_values=past_key_values,
+            past_key_values=past_key_values_new,
             encoder_hidden_states=hidden_states,
             encoder_attention_mask=attention_mask,
             head_mask=decoder_head_mask,
@@ -153,22 +150,7 @@ class FiDT5(T5ForConditionalGeneration):
             encoder_attentions=encoder_outputs.attentions,
         )
 
-class FidT5Stack(T5Stack):
-    """
-    Do the wrap/unwrap in this layer
-    """
-    def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        inputs_embeds=None,
-        head_mask=None,
-        cross_attn_head_mask=None,
-        past_key_values=None,
-        use_cache=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-    ):
+from transformers import AutoTokenizer
+model = t5.from_pretrained('t5-base')
+tokenzier = AutoTokenizer.from_pretrained('t5-base')
+model.generate(**tokenzier('hello hello hello hello', return_tensors='pt'))

@@ -25,8 +25,7 @@ class FiDT5(T5ForConditionalGeneration):
         encoder_config.is_decoder = False
         encoder_config.use_cache = False
         encoder_config.is_encoder_decoder = False
-        # modify the encoder arch
-        self.encoder = FiDT5Stack(encoder_config, self.shared)
+        self.encoder = FiDT5Stack(encoder_config, self.shared) # replace 
 
         decoder_config = copy.deepcopy(config)
         decoder_config.is_decoder = True
@@ -43,10 +42,22 @@ class FiDT5(T5ForConditionalGeneration):
         self.model_parallel = False
         self.device_map = None
 
+    def get_crossattention_scores(self, context_mask):
+        raise NotImplementedError('Please implement this function.')
+
 class FiDT5Stack(T5Stack):
-    """ Do the wrap/unwrap in this class (t5 encoder)
-    """
-    def forward(self, input_ids, attention_mask, **kwargs):
+
+    def forward(self, input_ids, attention_mask, context_embeds=None, **kwargs):
+        """ Wrap/unwrap input/ouput with this class (replace t5-encoder) 
+
+        :param input_ids: the tokenized input ids with shape (BN, L)
+        :param attention_mask: the attention mask with shape (B, NL)
+        :param context_embeds: 
+            the statement-aware query embeddings with shape (B, M); each embedding
+            was pre-encoded (so far) tensors with GTREncoder.
+
+        :return encoder_outputs: the huggingface model output class.
+        """
         if input_ids.dim() == 3: # normal usage of FiD
             B, N, L = input_ids.size()
         else:
@@ -65,7 +76,7 @@ class FiDT5Stack(T5Stack):
         attention_mask = attention_mask.view(B*N, -1)
 
         encoder_outputs = super().forward(
-                input_ids=input_ids, 
+                input_ids=None,
                 attention_mask=attention_mask, 
                 **kwargs
         )
@@ -75,5 +86,13 @@ class FiDT5Stack(T5Stack):
         ## I.e. from (BN, L, H) to (B, NL, H) 
         encoder_outputs['last_hidden_state'] = \
                 encoder_outputs['last_hidden_state'].view(B, N*L, -1)
+
+        # Modifying 3
+        ## Appending the context embeddings before
+        if context_embeds:
+            pass
+        else:
+            pass
+
         return encoder_outputs
 

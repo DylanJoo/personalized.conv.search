@@ -120,7 +120,7 @@ construct_start_train:
 MODEL=DylanJHJ/gtr-t5-base
 export CUDA_VISIBLE_DEVICES=2
 train_start_gtr:
-	python3 train/train_retriever.py \
+	python3 train/train_start_gtr.py \
      		--model_name_or_path ${MODEL} \
 		--tokenizer_name ${MODEL} \
      		--train_file data/start/train.jsonl \
@@ -141,3 +141,26 @@ train_start_gtr:
 	        --temperature 0.25 \
 	        --alpha 0.1 
 
+MODEL=facebook/contriever-msmarco
+export CUDA_VISIBLE_DEVICES=2
+train_start_contriever:
+	python3 train/train_start_contriever.py \
+     		--model_name_or_path ${MODEL} \
+		--tokenizer_name ${MODEL} \
+     		--train_file data/start/train.jsonl \
+		--config_name ${MODEL} \
+		--output_dir models/ckpt/start-contriever-ms-B160 \
+	        --max_p_length 256 \
+	        --max_q_length 64 \
+	        --per_device_train_batch_size 160 \
+	        --learning_rate 1e-5 \
+	        --evaluation_strategy steps \
+	        --max_steps 20000 \
+	        --save_steps 5000 \
+	        --eval_steps 500 \
+	        --freeze_document_encoder true \
+	        --do_train \
+	        --do_eval \
+	        --optim adafactor \
+	        --temperature 0.25 \
+	        --alpha 0.1 

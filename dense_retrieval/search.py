@@ -12,6 +12,7 @@ from tool import (
     load_qrecc_topics
 )
 from contriever import ContrieverQueryEncoder
+from gtr import GTREncoder
 import faiss
 
 def search(args, resolved=True, concat_ptkb=False):
@@ -19,17 +20,15 @@ def search(args, resolved=True, concat_ptkb=False):
     if 'contriever' in args.encoder_path:
         query_encoder = ContrieverQueryEncoder(args.encoder_path, args.device)
         searcher = FaissSearcher(args.index, query_encoder)
+    elif 'gtr' in args.encoder_path:
+        query_encoder = GTREncoder(args.encoder_path, args.device)
+        searcher = FaissSearcher(args.index, query_encoder)
     else:
         searcher = FaissSearcher(args.index, args.encoder_path)
 
     if torch.cuda.is_available():
         searcher.query_encoder.model.to(args.device)
         searcher.query_encoder.device = args.device
-
-    # tranform to gpu
-    # res = faiss.StandardGpuResources()
-    # searcher.index = \
-    #         faiss.index_cpu_to_gpu(res, args.device, searcher.index)
 
     # for example
     if "ikat" in args.query.lower():
