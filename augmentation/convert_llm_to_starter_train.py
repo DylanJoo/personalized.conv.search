@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
             # get topic and pseudo-relevant contexts
             docids = run[qid]
-            contexts = [collection[docid] for docid in docids]
+            contexts = [tuple(collection[docid]) for docid in docids]
             answer = answers[qid]
 
             # statements

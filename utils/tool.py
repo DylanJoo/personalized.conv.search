@@ -106,8 +106,8 @@ def load_collection(path, append=False, key='title', full=True):
         for i, line in enumerate(tqdm(fi)):
             if 'wiki' in path.lower():
                 doc_id, content, title = line.strip().split('\t')
-                content = content.strip()
-                title = title.strip()
+                content = content.strip().replace('\"', '')
+                title = title.strip().replace('\"', '')
                 if isinstance(append, str):
                     content = f"{title} {append} {content}"
                 elif isinstance(append, tuple):
