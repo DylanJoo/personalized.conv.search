@@ -9,7 +9,7 @@ from transformers import (
 from datasets import load_dataset
 
 # customized modules
-from data import DataCollatorForCtxRetriever
+from data import DataCollatorForStart
 from models import GTREncoder
 from trainers import TrainerForStart
 from arguments import ModelArgs, DataArgs, TrainArgs
@@ -47,12 +47,13 @@ def main():
 
     # Data
     ## Datacollator
-    data_collator = DataCollatorForCtxRetriever(
+    data_collator = DataCollatorForStart(
             tokenizer=tokenizer, 
             max_p_length=data_args.max_p_length,
             max_q_length=data_args.max_q_length,
             truncation=True,
             padding=True,
+            sep_token='</s>'
     )
 
     # Data

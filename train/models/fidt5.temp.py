@@ -35,9 +35,6 @@ class FiDT5(T5ForConditionalGeneration):
 
         self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
-        # add an adapter layer for adopting GTR embeddings
-        self.proj_star = nn.Linear(config.d_model, config.d_model)
-
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -48,18 +45,18 @@ class FiDT5(T5ForConditionalGeneration):
     def get_crossattention_scores(self, context_mask):
         raise NotImplementedError('Please implement this function.')
 
-    # def forward():
-    # the `past_key_values` has been disabled in encoder forward;
-    # however, it will activated as (additional) key/value states
-    # in the decoder's self attention layer.
-
 class FiDT5Stack(T5Stack):
 
-    def forward(self, input_ids, attention_mask, **kwargs):
+    def forward(self, 
+                input_ids, attention_mask, 
+                past_key_values=None, **kwargs):
         """ Wrap/unwrap input/ouput with this class (replace t5-encoder) 
 
         :param input_ids: the tokenized input ids with shape (BN, L)
         :param attention_mask: the attention mask with shape (B, NL)
+        :param context_embeds: 
+            the statement-aware query embeddings with shape (B, M); each embedding
+            was pre-encoded (so far) tensors with GTREncoder.
 
         :return encoder_outputs: the huggingface model output class.
         """
@@ -80,12 +77,11 @@ class FiDT5Stack(T5Stack):
         attention_mask = attention_mask.view(B*N, -1)
 
         # Minor modifying
-        ## Prefix tuning is used at decoder. 
-        ## Avoid `past_key_value` being considered here (encoder)
+        ## Prefix tuning at decoder. Avoid `past_key_value` being considered.
         encoder_outputs = super().forward(
                 input_ids=input_ids,
                 attention_mask=attention_mask, 
-                past_key_values=None, # preserve this for clarification.
+                past_key_values=None,
                 **kwargs
         )
 

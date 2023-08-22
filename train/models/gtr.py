@@ -66,11 +66,16 @@ class GTREncoder(T5EncoderModel):
         return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
     @torch.no_grad()
-    def encode(self, inputs, normalized=True):
+    def encode(self, inputs, normalized=True, projected=True):
         model_output = self.forward(**inputs)
-        pooled_embeddings = self.mean_pooling(model_output, inputs['attention_mask'])
+        embeddings = self.mean_pooling(model_output, inputs['attention_mask'])
+
+        # linear projection for retrieval
+        if projected:
+            embeddings = self.linear(embeddings)
+
+        # normalized for retrieval
         if normalized:
-            encoded_embeddings = F.normalize(self.linear(pooled_embeddings), p=2, dim=1)
-        else:
-            encoded_embeddings = self.linear(pooled_embeddings)
-        return encoded_embeddings
+            embeddings = F.normalize(embeddings, p=2, dim=1)
+
+        return embeddings

@@ -23,15 +23,17 @@ def batch_iterator(iterable, size=1, return_index=False):
         else:
             yield iterable[ndx:min(ndx + size, l)]
 
-def load_qrecc_topics(path):
+def load_qrecc_topics(path, key='Rewrite'):
     qrecc = load_dataset('json', data_files=path)['train']
 
-    # add column (unique question id)
+    # add unique question id
     qrecc = qrecc.map(lambda ex: {"id": f"{ex['Conversation_source']}_{ex['Conversation_no']}_{ex['Turn_no']}"})
+
+    # combine the question and answers (ConvRerank training)
     qrecc = qrecc.map(lambda ex: {"q_and_a": f"{ex['Rewrite']} {ex['Answer']}"})
 
     # Get queries and search
-    data_dict = {qid: query for qid, query in zip(qrecc['id'], qrecc['Rewrite'])}
+    data_dict = {qid: query for qid, query in zip(qrecc['id'], qrecc[key])}
     return data_dict
 
 def load_ikat_topics(path, resolved=True, concat_ptkb=False):
@@ -106,8 +108,10 @@ def load_collection(path, append=False, key='title', full=True):
                 doc_id, content, title = line.strip().split('\t')
                 content = content.strip()
                 title = title.strip()
-                if append:
+                if isinstance(append, str):
                     content = f"{title} {append} {content}"
+                elif isinstance(append, tuple):
+                    content = (title, content)
             else:
                 doc_id, content = line.strip().split('\t')
             data[str(doc_id)] = content

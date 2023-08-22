@@ -104,18 +104,26 @@ dsearch_ikat_train:
 	    --concat_ptkb
 
 construct_start_train:
-	python3 augmentation/postprocess_ctx_qp_pairs.py \
+	python3 augmentation/convert_llm_to_start_train.py.py \
     		--collection /tmp2/trec/ikat/data/collection/wiki/wiki_psgs_w100.tsv  \
     		--input_jsonl /home/jhju/huggingface_hub/START/train.unprocessed.jsonl \
      		--output_jsonl data/start/train.jsonl 
 	# Consistenct filter
-	# python3 augmentation/postprocess_ctx_qp_pairs.py \
+	# python3 augmentation/convert_llm_to_start_train.py.py \
     	# 	--input_jsonl \
      	# 	--output_jsonl \
      	# 	--filtering \
      	# 	--filter_model str \
      	# 	--filter_k int \
      	# 	--filter_thres float 
+
+construct_starter_train:
+	python3 augmentation/convert_llm_to_starter_train.py \
+    		--collection /tmp2/trec/ikat/data/collection/wiki/wiki_psgs_w100.tsv  \
+    		--run runs/qrecc.train.contriever.rewrite.run \
+    		--topic data/qrecc/qrecc_train.json \
+    		--input_jsonl /home/jhju/huggingface_hub/START/train.unprocessed.jsonl \
+     		--output_jsonl data/start/train_starter.jsonl 
 
 MODEL=DylanJHJ/gtr-t5-base
 export CUDA_VISIBLE_DEVICES=2
@@ -143,13 +151,14 @@ train_start_gtr:
 
 MODEL=facebook/contriever-msmarco
 export CUDA_VISIBLE_DEVICES=2
+ALPHA=0.5
 train_start_contriever:
 	python3 train/train_start_contriever.py \
      		--model_name_or_path ${MODEL} \
 		--tokenizer_name ${MODEL} \
      		--train_file data/start/train.jsonl \
 		--config_name ${MODEL} \
-		--output_dir models/ckpt/start-contriever-ms-B160 \
+		--output_dir models/ckpt/start-contriever-ms-B160-A0.5 \
 	        --max_p_length 256 \
 	        --max_q_length 64 \
 	        --per_device_train_batch_size 160 \
@@ -164,4 +173,4 @@ train_start_contriever:
 	        --optim adamw_hf \
 	        --warmup_steps 800 \
 	        --temperature 0.25 \
-	        --alpha 0.1 
+	        --alpha ${ALPHA}
