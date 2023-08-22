@@ -126,8 +126,8 @@ construct_starter_train:
      		--output_jsonl data/start/train_starter.jsonl 
 
 MODEL=DylanJHJ/gtr-t5-base
-export CUDA_VISIBLE_DEVICES=2
 train_start_gtr:
+	export CUDA_VISIBLE_DEVICES=2
 	python3 train/train_start_gtr.py \
      		--model_name_or_path ${MODEL} \
 		--tokenizer_name ${MODEL} \
@@ -150,9 +150,9 @@ train_start_gtr:
 	        --alpha 0.1 
 
 MODEL=facebook/contriever-msmarco
-export CUDA_VISIBLE_DEVICES=2
 ALPHA=0.5
 train_start_contriever:
+	export CUDA_VISIBLE_DEVICES=2
 	python3 train/train_start_contriever.py \
      		--model_name_or_path ${MODEL} \
 		--tokenizer_name ${MODEL} \
@@ -174,3 +174,13 @@ train_start_contriever:
 	        --warmup_steps 800 \
 	        --temperature 0.25 \
 	        --alpha ${ALPHA}
+
+MODEL=DylanJHJ/gtr-t5-base
+precompute_star_embeds:
+	python3 train/generate_star_embeds.py \
+     		--model_name_or_path ${MODEL} \
+		--input_jsonl data/start/train_starter.jsonl \
+		--output_jsonl data/start/train_starter_embeds.jsonl \
+	        --max_length 64 \
+		--device 'cuda:2' \
+		--sep_token '</s>'
