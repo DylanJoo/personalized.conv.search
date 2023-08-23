@@ -58,7 +58,7 @@ class FiDT5(T5ForConditionalGeneration):
         **kwargs
     ) -> Union[Tuple[torch.FloatTensor], Seq2SeqLMOutput]:
 
-        if past_key_values:
+        if past_key_values is not None:
             if past_key_values.dim() == 3:
                 # the first token generation (from star embeddings)
                 # [NOTE] Add docstrings

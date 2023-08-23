@@ -81,8 +81,8 @@ class DataCollatorForStarter:
             ### fix the prefix embeddings into the same batch
             ### the size should be: (B N_statements H)
             inputs['past_key_values'] = torch.stack([
-                torch.tensor(batch['statament_aware_embeds']) \
-                        for batch in feature
+                torch.tensor(batch['statement_aware_embeds']) \
+                        for batch in features
             ], dim=0)
         else:
             inputs['past_key_values'] = None

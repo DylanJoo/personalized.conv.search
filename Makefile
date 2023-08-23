@@ -199,16 +199,16 @@ train_starter_fid:
 		--config_name DylanJHJ/fidt5-base-nq \
      		--train_file data/start/train_starter_embeds.jsonl \
 		--output_dir models/ckpt/starter-fid-gtr-B32 \
-	        --per_device_train_batch_size 8 \
+	        --per_device_train_batch_size 32 \
 	        --max_src_length 320 \
 	        --max_tgt_length 32 \
 	        --precomputed_star_embeds true \
 	        --retrieval_enhanced true \
 	        --learning_rate 1e-5 \
 	        --evaluation_strategy steps \
-	        --max_steps 1000 \
-	        --save_steps 1000 \
-	        --eval_steps 10 \
+	        --max_steps 20000 \
+	        --save_steps 5000 \
+	        --eval_steps 500 \
 	        --do_train \
 	        --do_eval \
 	        --optim adafactor \
