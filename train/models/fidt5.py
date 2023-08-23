@@ -1,17 +1,11 @@
 import copy
 import torch
-from transformers import (
-    T5ForConditionalGeneration,
-    T5Config
-)
+from transformers import T5ForConditionalGeneration, T5Config
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 from typing import Optional, Tuple, Union
-from transformers.modeling_outputs import (
-    Seq2SeqLMOutput,
-    BaseModelOutput
-)
+from transformers.modeling_outputs import  Seq2SeqLMOutput, BaseModelOutput
 from transformers.models.t5.modeling_t5 import T5Stack
 
 class FiDT5(T5ForConditionalGeneration):
@@ -36,7 +30,14 @@ class FiDT5(T5ForConditionalGeneration):
         self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
         # add an adapter layer for adopting GTR embeddings
-        self.proj_star = nn.Linear(config.d_model, config.d_model)
+        ## [NOTE] the weights are random initialized
+        self.embed_size_per_head = config.d_model // config.num_heads
+        # Linear [H n_layer*H]
+        self.proj_star = nn.Linear(
+                config.d_model,
+                config.num_decoder_layers * config.d_model,
+                bias=False,
+        )
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -47,6 +48,48 @@ class FiDT5(T5ForConditionalGeneration):
 
     def get_crossattention_scores(self, context_mask):
         raise NotImplementedError('Please implement this function.')
+
+    def forward(
+        self,
+        input_ids: Optional[torch.LongTensor] = None,
+        attention_mask: Optional[torch.FloatTensor] = None,
+        encoder_outputs: Optional[Tuple[Tuple[torch.Tensor]]] = None,
+        past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None,
+        **kwargs
+    ) -> Union[Tuple[torch.FloatTensor], Seq2SeqLMOutput]:
+
+        if past_key_values:
+            if past_key_values.dim() == 3:
+                # the first token generation (from star embeddings)
+                # [NOTE] Add docstrings
+                B, M = past_key_values.shape[:2]
+                projection_star = self.proj_star(past_key_values)
+                # B M H --> B L 12*(12*64)
+
+                # B M L(12) nH(12) hH(64)
+                # L(12) B nH(12) M hH(64) --> 2 0 3 1 4
+                layer_star_embeds = projection_star.view(
+                        B, 
+                        M,
+                        self.config.num_decoder_layers,
+                        self.config.num_heads, 
+                        self.embed_size_per_head
+                ).permute(2, 0, 3, 1, 4)
+
+                past_key_values = tuple(
+                        (sa, sa, None, None) for sa in layer_star_embeds
+                )
+
+
+        # original forward passing 
+        ## Encoder would not use it, only for decoding.
+        return super().forward(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                past_key_values=past_key_values, # we dont need injection here
+                encoder_outputs=encoder_outputs, 
+                **kwargs
+        )
 
     # def forward():
     # the `past_key_values` has been disabled in encoder forward;

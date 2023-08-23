@@ -70,7 +70,7 @@ if __name__ == '__main__':
                 embeddings = embeddings.detach().cpu().numpy().tolist()
 
                 ### writer
-                item.update({"statament_aware_embeds": embeddings})
+                item.update({"statement_aware_embeds": embeddings})
                 fout.write(json.dumps(item, ensure_ascii=False)+'\n')
 
     fout.close()

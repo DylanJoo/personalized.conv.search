@@ -1,9 +1,7 @@
 import sys
 import multiprocessing
 from transformers import (
-    AutoConfig,
     AutoTokenizer,
-    AutoModelForCausualLM,
     HfArgumentParser,
     GenerationConfig
 )
@@ -48,25 +46,28 @@ def main():
     # Data
     ## Datacollator
     data_collator = DataCollatorForStarter(
-            retrieval_enhanced=model_args.retrieval_enhanced
+            retrieval_enhanced=model_args.retrieval_enhanced,
             tokenizer=tokenizer, 
-            max_p_length=data_args.max_p_length,
-            max_q_length=data_args.max_q_length,
+            max_src_length=data_args.max_p_length,
+            max_tgt_length=data_args.max_q_length,
             truncation=True,
             padding=True,
             sep_token='</s>',
+            star_encoder=star_encoder
     )
 
     # Data
     ## Dataset
     dataset = load_dataset('json', data_files=data_args.train_file)
+    # dataset = dataset.map(lambda ex: {
+    #     'statement_aware_embeds': torch.tensor(ex['statement_aware_embeds'])
+    # })
     n_examples = len(dataset['train'])
     if training_args.do_eval:
         dataset = dataset['train'].train_test_split(test_size=100, seed=1997)
 
     # Trainer
     trainer = TrainerForStarter(
-            document_encoder=model_freezed,
             model=model, 
             args=training_args,
             train_dataset=dataset['train'],

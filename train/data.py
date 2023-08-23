@@ -4,8 +4,11 @@ import torch
 import random
 from dataclasses import dataclass, field
 from typing import Optional, Union, List, Dict, Tuple, Any
-from transformers.tokenization_utils_base import PreTrainedTokenizerBase
-from transformers.tokenization_utils_base import PaddingStrategy, PreTrainedTokenizerBase
+from transformers import T5EncoderModel
+from transformers.tokenization_utils_base import (
+    PaddingStrategy, 
+    PreTrainedTokenizerBase
+)
 
 @dataclass
 class DataCollatorForStarter:
@@ -21,6 +24,7 @@ class DataCollatorForStarter:
     title_prefix: Optional[str] = 'title:'
     passage_prefix: Optional[str] = 'passage:'
     retrieval_enhanced: Union[bool, str] = False
+    star_encoder: Optional[T5EncoderModel] = None
 
     def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
 
@@ -62,7 +66,7 @@ class DataCollatorForStarter:
                 truncation=self.truncation,
                 padding=self.padding,
                 return_tensors='pt'
-        )
+        ).input_ids
 
         inputs['input_ids'] = inputs['input_ids'].view(
                 -1, self.n_contexts, inputs['input_ids'].size(-1)
@@ -75,8 +79,11 @@ class DataCollatorForStarter:
         if self.retrieval_enhanced:
             ### To use different amount of statements within a same batch, 
             ### fix the prefix embeddings into the same batch
-            inputs['past_key_values'] = \
-                    [batch['statament_aware_embeds'] for batch in feature]
+            ### the size should be: (B N_statements H)
+            inputs['past_key_values'] = torch.stack([
+                torch.tensor(batch['statament_aware_embeds']) \
+                        for batch in feature
+            ], dim=0)
         else:
             inputs['past_key_values'] = None
         

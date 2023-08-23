@@ -184,9 +184,32 @@ precompute_star_embeds:
 	python3 train/generate_star_embeds.py \
      		--model_name_or_path DylanJHJ/gtr-t5-base \
 		--input_jsonl data/start/train_starter.jsonl \
-		--output_jsonl data/start/train_starter_embeds_new.jsonl \
+		--output_jsonl data/start/temp.jsonl \
 		--max_num_statements 10 \
 		--min_num_statements 5 \
 	        --max_length 64 \
 		--device 'cuda:2' \
 		--sep_token '</s>'
+
+export CUDA_VISIBLE_DEVICES=2
+train_starter_fid:
+	python3 train/train_starter_fid.py \
+     		--model_name_or_path DylanJHJ/fidt5-base-nq \
+     		--tokenizer_name DylanJHJ/fidt5-base-nq \
+		--config_name DylanJHJ/fidt5-base-nq \
+     		--train_file data/start/train_starter_embeds.jsonl \
+		--output_dir models/ckpt/starter-fid-gtr-B32 \
+	        --per_device_train_batch_size 8 \
+	        --max_src_length 320 \
+	        --max_tgt_length 32 \
+	        --precomputed_star_embeds true \
+	        --retrieval_enhanced true \
+	        --learning_rate 1e-5 \
+	        --evaluation_strategy steps \
+	        --max_steps 1000 \
+	        --save_steps 1000 \
+	        --eval_steps 10 \
+	        --do_train \
+	        --do_eval \
+	        --optim adafactor \
+	        --warmup_steps 800

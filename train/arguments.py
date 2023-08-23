@@ -29,6 +29,9 @@ class DataArgs:
     eval_file: Optional[str] = field(default=None)
     max_p_length: int = field(default=512)
     max_q_length: int = field(default=128)
+    max_src_length: int = field(default=320)
+    max_tgt_length: int = field(default=32)
+    precomputed_star_embeds: bool = field(default=False)
 
 @dataclass
 class TrainArgs(TrainingArguments):

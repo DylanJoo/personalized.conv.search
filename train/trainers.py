@@ -54,29 +54,13 @@ class TrainerForStart(Trainer):
 
 class TrainerForStarter(Seq2SeqTrainer):
 
-    def compute_loss(self, model, batch, return_outputs=False):
-        # forward triplet and get logits
-        outputs = model.forward_start(
-                batch['q_inputs'], 
-                batch['qs_inputs'],
-                batch['p_inputs'],
-                document_encoder=self.document_encoder
-        )
+    def compute_loss(self, model, inputs, return_outputs=False):
+        outputs = model.forward(**inputs)
 
         # Calculate losses
         ## 1) InfoNCE loss for dense retrieval
-        qp_logits = outputs['qp_logits'] / self.temperature
-        qsp_logits = outputs['qsp_logits'] / self.temperature
-        loss_rt = info_nce(qp_logits) + info_nce(qsp_logits)
-
-        ## 2) Relevance-aware pairwise loss for personalized retrieval
-        paired_logits = torch.stack([
-            torch.diag(qp_logits), torch.diag(qsp_logits)
-        ], dim=-1)
-        loss_start = pair_ce(paired_logits, pos_idx=1)
-
-        ## 3) Schedule/weight loss
-        loss = loss_rt + loss_start * self.alpha
+        loss = outputs.get('loss')
+        loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
 
         # Save past state if it exists
         # TODO: this needs to be fixed and made cleaner later.
