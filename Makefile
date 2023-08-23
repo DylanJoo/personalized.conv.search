@@ -17,11 +17,18 @@ ssearch_ikat_test:
 	    --topic data/ikat/2023_test_topics.json
 
 preprocess_hotpot_train:
-	 python3 preprocess/flatten_hotpotqa.py \
+	python3 preprocess/flatten_hotpotqa.py \
 	    --hotpotqa_json data/hotpotqa/hotpot_train_v1.1.json \
 	    --output data/hotpotqa/flatten_hotpotqa.jsonl \
 	    --return_corpus
-	
+index_ikat_clueweb:
+	python3 -m pyserini.index.lucene \
+	    --collection JsonCollection \
+	    --input /tmp2/trec/ikat/data/collection/ikat/ \
+	    --index /tmp2/trec/ikat/indexes/clueweb_ikat/ \
+	    --generator DefaultLuceneDocumentGenerator \
+	    --threads 4
+
 index_hotpot_corpus_contriever:
 	python dense_retrieval/index.py input \
 	    --corpus data/hotpotqa/passages.jsonl \
@@ -125,14 +132,13 @@ construct_starter_train:
     		--input_jsonl /home/jhju/huggingface_hub/START/train.unprocessed.jsonl \
      		--output_jsonl data/start/train_starter.jsonl 
 
-MODEL=DylanJHJ/gtr-t5-base
 train_start_gtr:
 	export CUDA_VISIBLE_DEVICES=2
 	python3 train/train_start_gtr.py \
-     		--model_name_or_path ${MODEL} \
-		--tokenizer_name ${MODEL} \
+     		--model_name_or_path DylanJHJ/gtr-t5-base \
+		--tokenizer_name DylanJHJ/gtr-t5-base \
      		--train_file data/start/train.jsonl \
-		--config_name ${MODEL} \
+		--config_name DylanJHJ/gtr-t5-base \
 		--output_dir models/ckpt/start-base-B160 \
 	        --max_p_length 256 \
 	        --max_q_length 64 \
@@ -149,15 +155,14 @@ train_start_gtr:
 	        --temperature 0.25 \
 	        --alpha 0.1 
 
-MODEL=facebook/contriever-msmarco
 ALPHA=0.5
 train_start_contriever:
 	export CUDA_VISIBLE_DEVICES=2
 	python3 train/train_start_contriever.py \
-     		--model_name_or_path ${MODEL} \
-		--tokenizer_name ${MODEL} \
+     		--model_name_or_path facebook/contriever-msmarco \
+		--tokenizer_name facebook/contriever-msmarco \
      		--train_file data/start/train.jsonl \
-		--config_name ${MODEL} \
+		--config_name facebook/contriever-msmarco \
 		--output_dir models/ckpt/start-contriever-ms-B160-A0.5 \
 	        --max_p_length 256 \
 	        --max_q_length 64 \
@@ -175,12 +180,13 @@ train_start_contriever:
 	        --temperature 0.25 \
 	        --alpha ${ALPHA}
 
-MODEL=DylanJHJ/gtr-t5-base
 precompute_star_embeds:
 	python3 train/generate_star_embeds.py \
-     		--model_name_or_path ${MODEL} \
+     		--model_name_or_path DylanJHJ/gtr-t5-base \
 		--input_jsonl data/start/train_starter.jsonl \
-		--output_jsonl data/start/train_starter_embeds.jsonl \
+		--output_jsonl data/start/train_starter_embeds_new.jsonl \
+		--max_num_statements 10 \
+		--min_num_statements 5 \
 	        --max_length 64 \
 		--device 'cuda:2' \
 		--sep_token '</s>'

@@ -4,7 +4,6 @@ from transformers import (
     AutoConfig,
     AutoTokenizer,
     HfArgumentParser,
-    GenerationConfig
 )
 from datasets import load_dataset
 
@@ -16,7 +15,7 @@ from arguments import ModelArgs, DataArgs, TrainArgs
 
 import os
 
-def main():
+def main():er
     # Parse argument for huggingface packages
     parser = HfArgumentParser((ModelArgs, DataArgs, TrainArgs))
 
@@ -40,10 +39,6 @@ def main():
         model_freezed.cuda()
     else:
         model_freezed = None
-
-    # Generation config
-    generation_config = GenerationConfig.from_model_config(model.config)
-    model.generation_config = generation_config
 
     # Data
     ## Datacollator

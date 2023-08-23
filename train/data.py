@@ -73,8 +73,10 @@ class DataCollatorForStarter:
 
         ## past_key_values: (B, M); M stands # of statements(-aware) query
         if self.retrieval_enhanced:
+            ### To use different amount of statements within a same batch, 
+            ### fix the prefix embeddings into the same batch
             inputs['past_key_values'] = \
-                    [batch['statament_aware_embed'] for batch in feature]
+                    [batch['statament_aware_embeds'] for batch in feature]
         else:
             inputs['past_key_values'] = None
         
