@@ -8,6 +8,7 @@ from transformers import (
 )
 from loss import InBatchNegativeCELoss as info_nce
 from loss import PairwiseCELoss as pair_ce
+from loss import LMCELoss as gen_ce
 
 class TrainerForStart(Trainer):
     def __init__(
@@ -58,9 +59,12 @@ class TrainerForStarter(Seq2SeqTrainer):
         outputs = model.forward(**inputs)
 
         # Calculate losses
-        ## 1) InfoNCE loss for dense retrieval
-        loss = outputs.get('loss')
-        loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
+        ## generation NLL/CE loss
+        loss = outputs.get('loss', 0)
+        # loss = gen_ce(
+        #         outputs['logits'], inputs['labels'], 
+        #         model.config.vocab_size
+        # )
 
         # Save past state if it exists
         # TODO: this needs to be fixed and made cleaner later.

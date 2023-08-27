@@ -20,3 +20,10 @@ def PairwiseCELoss(scores, pos_idx=1):
             [pos_idx]*logits.shape[0], dtype=torch.long, device=logits.device
     )
     return CELoss(logits, labels)
+
+def LMCELoss(logits, labels, vocab_size):
+    CELoss = nn.CrossEntropyLoss()
+    logits = logits.view(-1, vocab_size)
+    labels = labels.to(logits.device).view(-1)
+    return CELoss(logits, labels)
+

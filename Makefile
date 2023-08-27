@@ -1,17 +1,17 @@
 # spare retrieval
-CLUEWEB=/tmp2/trec/ikat/indexes/clueweb22_ikat-lucene
+CLUEWEB=/tmp2/trec/ikat/indexes/clueweb_ikat/
 ssearch_ikat_train:
 	python3 sparse_retrieval/bm25_ikat.py \
-	    --k 100 --k1 0.9 --b 0.4 \
-	    --index $CLUEWEB \
+	    --k 500 --k1 0.9 --b 0.4 \
+	    --index ${CLUEWEB} \
 	    --output runs/ikat.train.bm25.run \
 	    --resolved \
 	    --topic data/ikat/2023_train_topics.json
 
 ssearch_ikat_test:
 	python3 sparse_retrieval/bm25_ikat.py \
-	    --k 100 --k1 0.9 --b 0.4 \
-	    --index $CLUEWEB \
+	    --k 500 --k1 0.9 --b 0.4 \
+	    --index ${CLUEWEB} \
 	    --output runs/ikat.test.bm25.run \
 	    --resolved \
 	    --topic data/ikat/2023_test_topics.json
@@ -91,7 +91,7 @@ dsearch_ikat_train:
 	python3 dense_retrieval/search.py \
 	    --k 100  \
 	    --index /tmp2/trec/ikat/indexes/wiki-contriever/ \
-	    --output runs/ikat.train.contriever.resolved.run \
+	    --output runs/ikat.train.contriever.run \
 	    --encoder_path /tmp2/trec/pds/retrievers/contriever-msmarco/ \
 	    --query data/ikat/2023_train_topics.json \
 	    --device cuda:2 \
@@ -101,8 +101,8 @@ dsearch_ikat_train:
 	# use ptkb 
 	python3 dense_retrieval/search.py \
 	    --k 100  \
-	    --index /tmp2/trec/ikat/indexes/msmarco-contriever/ \
-	    --output runs/ikat.train.contriever.resolved+ptkb.run \
+	    --index /tmp2/trec/ikat/indexes/wiki-contriever/ \
+	    --output runs/ikat.train.contriever.ptkb.run \
 	    --encoder_path /tmp2/trec/pds/retrievers/contriever-msmarco/ \
 	    --query data/ikat/2023_train_topics.json \
 	    --device cuda:2 \
@@ -131,7 +131,7 @@ construct_starter_train:
     		--topic data/qrecc/qrecc_train.json \
     		--input_jsonl /home/jhju/huggingface_hub/START/train.unprocessed.jsonl \
      		--output_jsonl data/start/train_starter.jsonl 
-
+ALPHA=0.5
 train_start_gtr:
 	export CUDA_VISIBLE_DEVICES=2
 	python3 train/train_start_gtr.py \
@@ -139,7 +139,7 @@ train_start_gtr:
 		--tokenizer_name DylanJHJ/gtr-t5-base \
      		--train_file data/start/train.jsonl \
 		--config_name DylanJHJ/gtr-t5-base \
-		--output_dir models/ckpt/start-base-B160 \
+		--output_dir models/ckpt/start-gtr-base-B160-A${ALPHA} \
 	        --max_p_length 256 \
 	        --max_q_length 64 \
 	        --per_device_train_batch_size 160 \
@@ -153,7 +153,7 @@ train_start_gtr:
 	        --do_eval \
 	        --optim adafactor \
 	        --temperature 0.25 \
-	        --alpha 0.1 
+	        --alpha ${ALPHA}
 
 ALPHA=0.5
 train_start_contriever:

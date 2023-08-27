@@ -15,7 +15,7 @@ from arguments import ModelArgs, DataArgs, TrainArgs
 
 import os
 
-def main():er
+def main():
     # Parse argument for huggingface packages
     parser = HfArgumentParser((ModelArgs, DataArgs, TrainArgs))
 

@@ -80,10 +80,15 @@ class DataCollatorForStarter:
             ### To use different amount of statements within a same batch, 
             ### fix the prefix embeddings into the same batch
             ### the size should be: (B N_statements H)
+            #### list of tensors
             inputs['past_key_values'] = torch.stack([
-                torch.tensor(batch['statement_aware_embeds']) \
-                        for batch in features
+                batch['statement_aware_embeds'] for batch in features
             ], dim=0)
+            #### list of list
+            # inputs['past_key_values'] = torch.stack([
+            #     torch.tensor(batch['statement_aware_embeds']) \
+            #             for batch in features
+            # ], dim=0)
         else:
             inputs['past_key_values'] = None
         
