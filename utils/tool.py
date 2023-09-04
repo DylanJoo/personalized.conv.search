@@ -1,3 +1,5 @@
+from copy import copy
+import random
 import json
 import argparse
 import random
@@ -6,7 +8,7 @@ import numpy as np
 import re
 import collections
 import os
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
 
 def normalized(x):
     x = x.strip()
@@ -36,40 +38,104 @@ def load_qrecc_topics(path, key='Rewrite'):
     data_dict = {qid: query for qid, query in zip(qrecc['id'], qrecc[key])}
     return data_dict
 
-def load_ikat_topics(path, resolved=True, concat_ptkb=False):
-    data_dict = {}
-    data = json.load(open(path, 'r'))
-    for topic in data:
+def get_ikat_dataset(path, rewritten_path=None):
+    # ikat dataset
+    dataset = load_dataset('json', data_files=path)['train']
+    # [TODO] Make it more easier
+    if rewritten_path is not None:
+        rewritten = load_topics(rewritten_path, 'generated_question')
+
+    # flatten the turns
+    data_list = []
+    for topic in dataset:
         topic_id = topic['number']
         try:
-            turns = topic['turns']
-            title = topic['title'] # more like a topic description
-            ptkbs = list(topic['ptkb'].values())
+            # [NOTE] `Dataset` would make the dict length consistent, 
+            # so it'll add None
+            ptkbs = {k: v for k, v in topic['ptkb'].items() if v is not None}
         except:
-            # this is not the first turn of the topic
             continue
 
-        for turn in turns:
+        history = []
+        for turn in topic['turns']:
+            data = {}
+
+            # turn
             turn_id = turn['turn_id']
-            question = turn['utterance'].strip()
 
-            if resolved:    # [Prep 1]: resolved utterances
-                question = turn['resolved_utterance'].strip()
-            if concat_ptkb: # [Prep 2]: concat ptkb
-                selected_ptkb = turn.get('ptkb_provenance', None)
-                if selected_ptkb:
-                    if isinstance(selected_ptkb, list):
-                        selected_ptkb = [ptkbs[p-1] for p in selected_ptkb]
-                        selected_ptkb = " ".join(selected_ptkb)
-                    else:
-                        selected_ptkb = ptkbs[selected_ptkb-1]
-                else:
-                    selected_ptkb = random.sample(ptkbs, k=1)[0]
-
-                data_dict[f"{topic_id}_{turn_id}"] = f"{selected_ptkb} {question}"
+            # collect data
+            data['id'] = f"{topic_id}_{turn_id}" 
+            if rewritten_path is not None:
+                utterance = rewritten[data['id']]
             else:
-                data_dict[f"{topic_id}_{turn_id}"] = question
-    return data_dict
+                utterance = turn['utterance']
+            response = turn['response']
+
+            ## qrecc: question / conversations/ rewrite
+            data['Question'] = utterance
+            data['Conversation'] = copy(history)
+            data['Rewrite'] = turn['resolved_utterance']
+            data['selected_ptkbs'] = [\
+                    ptkbs[str(i)] for i in turn['ptkb_provenance']\
+            ]
+
+            ## use all ptkbs
+            # data['all_ptkbs'] = random.sample(
+            #         list(ptkbs.values()), k=len(list(ptkbs.values()))
+            # )
+            data['all_ptkbs'] = list(ptkbs.values())
+            data_list.append(data)
+
+            ## historical utterances
+            history.append([utterance, response])
+
+    return Dataset.from_list(data_list)
+
+# Deprecated
+# def load_ikat_topics(path, resolved=True, concat_ptkb=False):
+#     data_dict = {}
+#     data = json.load(open(path, 'r'))
+#     for topic in data:
+#         topic_id = topic['number']
+#         try:
+#             turns = topic['turns']
+#             title = topic['title'] # more like a topic description
+#             ptkbs = list(topic['ptkb'].values())
+#         except:
+#             # this is not the first turn of the topic
+#             continue
+#
+#         history = []
+#         for turn in turns:
+#             turn_id = turn['turn_id']
+#
+#             utterance = ()
+#             if resolved: # [Prep 1]: resolved utterances
+#                 utterance += (turn['resolved_utterance'].strip(), )
+#             else:        # [Prep 3]: history includes utterances & responses
+#                 utterance += (" ||| ".join(history), ) 
+#                 utterance += (turn['utterance'].strip(), )
+#
+#             if concat_ptkb: # [Prep 2]: concat ptkb
+#                 selected_ptkb = turn.get('ptkb_provenance', None)
+#                 if selected_ptkb:
+#                     if isinstance(selected_ptkb, list):
+#                         selected_ptkb = [ptkbs[p-1] for p in selected_ptkb]
+#                         selected_ptkb = " ||| ".join(selected_ptkb)
+#                     else:
+#                         selected_ptkb = ptkbs[selected_ptkb-1]
+#                 else:
+#                     selected_ptkb = random.sample(ptkbs, k=1)[0]
+#
+#                 data_dict[f"{topic_id}_{turn_id}"] = \
+#                         (selected_ptkb,) + utterance
+#             else:
+#                 data_dict[f"{topic_id}_{turn_id}"] = utterance
+#
+#             # [Prep 3]: update the historical utterances and responses
+#             history.append(turn['utterance'])
+#             history.append(turn['response'])
+#     return data_dict
 
 def load_topics(path, selected_key='question'):
     data_dict = {}

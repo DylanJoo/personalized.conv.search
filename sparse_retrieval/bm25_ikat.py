@@ -3,48 +3,22 @@ from tqdm import tqdm
 import json
 import argparse
 from pyserini.search.lucene import LuceneSearcher
+from tool import get_ikat_dataset
+from datasets import load_dataset
 
-def search(index_dir, topic_path, output='sample.trec', k=1000, k1=0.9, b=0.4):
+def search(index_dir, dataset, output='sample.trec', k=1000, k1=0.9, b=0.4):
     # init lucene searcher
     searcher = LuceneSearcher(index_dir)
     searcher.set_bm25(k1=k1, b=b)
 
-    # load topic (using manual rewritten question)
-    query = {}
-    data = json.load(open(topic_path, 'r'))
-    for topic in data:
-        topic_id = topic['number']
-        try:
-            turns = topic['turns']
-            title = topic['title'] # more like a topic description
-            ptkbs = topic['ptkb']
-        except:
-            # this is not the first turn of the topic
-            continue
-
-        for turn in turns:
-            turn_id = turn['turn_id']
-            question = turn['utterance'].strip()
-
-            if args.resolved:    # [Prep 1]: resolved utterances
-                question = turn['resolved_utterance'].strip()
-            if args.concat_ptkb: # [Prep 2]: concat ptkb
-                query[f"{topic_id}_{turn_id}"] = f"{ptkb} {question}"
-            else:
-                query[f"{topic_id}_{turn_id}"] = question
-
-            response = turn['response']
-            # ptkb_pvn = turn['ptkb_provenance']
-            # response_pvn = turn['response_provenance']
-
-    # prepare the output file
-    output = open(output, 'w')
-
     # search for each q
-    for qid, qtext in tqdm(query.items(), total=len(query.keys())):
+    for query in tqdm(dataset, total=len(dataset)):
+        qid, qtext = query['id'], query['Question']
         hits = searcher.search(qtext, k=k)
         for i in range(len(hits)):
             output.write(f'{qid} Q0 {hits[i].docid:4} {i+1} {hits[i].score:.5f} BM25\n')
+
+    output.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -54,15 +28,36 @@ if __name__ == '__main__':
     parser.add_argument("--index", default=None, type=str)
     parser.add_argument("--output", default='runs/run.sample.txt', type=str)
     parser.add_argument("--topic", default=None, type=str)
-    parser.add_argument("--resolved", default=False, action='store_true')
     parser.add_argument("--concat_ptkb", default=False, action='store_true')
+    parser.add_argument("--rewritten", default=None, type=str)
     args = parser.parse_args()
 
     os.makedirs(args.output.rsplit('/', 1)[0], exist_ok=True)
+
+    # dataset
+    ## load from json
+    dataset = get_ikat_dataset(args.topic)
+
+    ## preprocess 
+    if args.rewritten is not None:
+        rewritten = load_dataset(
+                'json', data_files=args.rewritten, keep_in_memory=True
+        )['train']
+        rewritten = {k: v for k, v in zip(rewritten['qid'], rewritten['generated_question'])}
+        dataset.map(lambda x: {'Question': rewritten[x['id']]})
+
+    if args.concat_ptkb:
+        # all the ptkbs 
+        dataset = dataset.map(lambda x: {'Question': " | ".join(x['all_ptkbs']) + x['Question']})
+
+    # output writier
+    writer = open(args.output, 'w')
+
+    # search
     search(
             index_dir=args.index,
-            topic_path=args.topic, 
-            output=args.output,
+            dataset=dataset,
+            output=writer,
             k=args.k, k1=args.k1, b=args.b
     )
     print("Done")

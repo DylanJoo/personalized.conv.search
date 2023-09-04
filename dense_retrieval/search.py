@@ -8,14 +8,13 @@ from tool import (
     load_collection, 
     batch_iterator, 
     load_topics, 
-    load_ikat_topics, 
-    load_qrecc_topics
+    load_qrecc_topics,
+    get_ikat_dataset
 )
 from contriever import ContrieverQueryEncoder
 from gtr import GTREncoder
-import faiss
 
-def search(args, resolved=True, concat_ptkb=False):
+def search(args, rewritten=None, concat_ptkb=False):
 
     if 'contriever' in args.encoder_path:
         query_encoder = ContrieverQueryEncoder(args.encoder_path, args.device)
@@ -32,21 +31,32 @@ def search(args, resolved=True, concat_ptkb=False):
 
     # for example
     if "ikat" in args.query.lower():
-        query = load_ikat_topics(args.query, resolved=resolved, concat_ptkb=concat_ptkb)
+        query = get_ikat_dataset(args.query, rewritten_path=args.rewritten)
+        if args.concat_ptkb:
+            qids, qtexts = [], []
+            for i in range(len(query)):
+                for j, ptkb in enumerate(query['all_ptkbs'][i]):
+                    qids.append(f"{query['id'][i]}:{j}")
+                    qtexts.append(f"{query['Question'][i]} [SEP] {ptkb}")
+        else:
+            qids = query['id']
+            qtexts = query['Question']
+
     elif 'qrecc' in args.query.lower():
         query = load_qrecc_topics(args.query)
+        qids = list(query.keys())
+        qtexts = list(query.values())
     else:
         query = load_topics(args.query)
-
-    qids = list(query.keys())
-    qtexts = list(query.values())
+        qids = list(query.keys())
+        qtexts = list(query.values())
 
     # prepare the output file
     output = open(args.output, 'w')
 
     # search for each q
     if args.batch_size == 1:
-        for qid, qtext in tqdm(query.items()):
+        for qid, qtext in zip(qids, qtexts):
             hits = searcher.search(qtext, k=args.k, threads=10)
             for i in range(len(hits)):
                 output.write(f'{qid} Q0 {hits[i].docid:4} {i+1} {hits[i].score:.5f} FAISS\n')
@@ -78,10 +88,10 @@ if __name__ == '__main__':
     parser.add_argument("--device", default='cpu', type=str)
     parser.add_argument("--batch_size", default=1, type=int)
     # special args for ikat
-    parser.add_argument("--resolved", default=False, action='store_true')
+    parser.add_argument("--rewritten", default=None, type=str)
     parser.add_argument("--concat_ptkb", default=False, action='store_true')
     args = parser.parse_args()
 
     os.makedirs('runs', exist_ok=True)
-    search(args, args.resolved, args.concat_ptkb)
+    search(args, args.rewritten, args.concat_ptkb)
     print("Done")
