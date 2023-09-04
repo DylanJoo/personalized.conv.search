@@ -246,10 +246,38 @@ rerank_contriever_baseline:
 	python3 dense_retrieval/rerank_contriever.py \
 	    --q_encoder_path models/ckpt/start-contriever-ms-B160-A0.1/checkpoint-20000/ \
 	    --d_encoder_path /home/jhju/models/contriever-msmarco/ \
-	    --device cuda:2 \
+	    --device cuda:1 \
 	    --batch_size 8 \
 	    --run runs/ikat.test.bm25.run \
 	    --query data/ikat/2023_test_topics.json \
 	    --rewritten data/ikat/ikat.test.t5ntr_history_3-3.jsonl \
 	    --collection_dir /tmp2/trec/ikat/data/collection/ikat/ \
 	    --output_run runs/ikat.test.bm25.contriever.run
+
+# start-contriever 
+prepare_submissionA:
+	python3 preprocess/merge_lists.py \
+	    --list_clueweb runs/ikat.test.bm25.run \
+	    --list_wiki runs/ikat.test.ikat.test.contriever.wiki.run \
+	    --submission_file submissions/cfda1.json \
+	    --submission_name cfda1 \
+	    --provenance_file data/ikat/provenances/A.provenance.jsonl
+
+# start-contriever 
+prepare_submissionB:
+	python3 preprocess/merge_lists.py \
+	    --list_clueweb runs/ikat.test.bm25.run \
+	    --list_wiki runs/ikat.test.start-contriever.wiki.run \
+	    --submission_file submissions/cfda2.json \
+	    --submission_name cfda2 \
+	    --provenance_file submissions_template/B.provenance.jsonl
+
+# start-contriever 
+prepare_submissionC:
+	python3 preprocess/merge_lists.py \
+	    --list_clueweb runs/ikat.test.bm25.function.run \
+	    --list_wiki runs/ikat.test.start-contriever.wiki.run \
+	    --submission_file submissions/cfda3.json \
+	    --submission_name cfda3 \
+	    --provenance_file submissions_template/C.provenance.jsonl
+	cp submissions/cfda3.json submissions/cfda4.json

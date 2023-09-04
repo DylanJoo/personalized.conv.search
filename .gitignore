@@ -5,6 +5,7 @@ archived/
 **/*.swp
 wandb/
 logs/
+submissions/
 models/ckpt/*/*/*
 !models/ckpt/contriever_config/*
 !models/ckpt/gtr_config/*

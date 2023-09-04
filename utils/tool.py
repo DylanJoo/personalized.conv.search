@@ -166,7 +166,7 @@ def load_runs(path, output_score=False): # support .trec file only
     return sorted_run_dict
 
 def load_collections(dir, full=True):
-    data = {}
+    data = collections.defaultdict(str)
     for path in os.listdir(dir):
         data_subset = load_collection(os.path.join(dir, path), full=full)
         data.update(data_subset)

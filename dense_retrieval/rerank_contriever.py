@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import torch
 from tqdm import tqdm 
@@ -15,7 +16,7 @@ from contriever import (
 from collections import defaultdict
 
 def rerank(queries, docs, q_encoder, d_encoder):
-    q_embs = np.array([self.query_encoder.encode(q) for q in queries])
+    q_embs = np.array([q_encoder.encode(q) for q in queries])
     d_embs = d_encoder.encode(docs)
     scores = np.matmul(q_embs, d_embs.T).diagonal()
     return scores
@@ -62,7 +63,7 @@ if __name__ == '__main__':
         documents = [collections[docid] for docid in docids]
 
         # rerank
-        rel_scores = rerank(queries, documents, q_encoder, d_encoder)
+        rel_scores = rerank(queries, documents, query_encoder, doc_encoder)
 
         for qid, docid, score in zip(qids, docids, rel_scores):
             ranking_list[qid].append( (docid, score) )
