@@ -17,10 +17,10 @@ from gtr import GTREncoder
 def search(args, rewritten=None, concat_ptkb=False):
 
     if 'contriever' in args.encoder_path:
-        query_encoder = ContrieverQueryEncoder(args.encoder_path, args.device)
+        query_encoder = ContrieverQueryEncoder(args.encoder_path, device=args.device)
         searcher = FaissSearcher(args.index, query_encoder)
     elif 'gtr' in args.encoder_path:
-        query_encoder = GTREncoder(args.encoder_path, args.device)
+        query_encoder = GTREncoder(args.encoder_path, device=args.device)
         searcher = FaissSearcher(args.index, query_encoder)
     else:
         searcher = FaissSearcher(args.index, args.encoder_path)

@@ -165,6 +165,13 @@ def load_runs(path, output_score=False): # support .trec file only
 
     return sorted_run_dict
 
+def load_collections(dir, full=True):
+    data = {}
+    for path in os.listdir(dir):
+        data_subset = load_collection(os.path.join(dir, path), full=full)
+        data.update(data_subset)
+    return data
+
 def load_collection(path, append=False, key='title', full=True):
     data = collections.defaultdict(str)
     fi = open(path, 'r')
@@ -185,7 +192,7 @@ def load_collection(path, append=False, key='title', full=True):
             if (full is False) and (i > 10000):
                 break
     else:
-        for line in tqdm(fi):
+        for i, line in enumerate(tqdm(fi)):
             item = json.loads(line.strip())
             doc_id = item.pop('id')
             if append:
@@ -196,4 +203,7 @@ def load_collection(path, append=False, key='title', full=True):
                 if 'contents' in item:
                     key = 'contents'
                 data[str(doc_id)] = item[key]
+            if (full is False) and (i > 10000):
+                break
+    fi.close()
     return data

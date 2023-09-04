@@ -242,3 +242,14 @@ train_starter_fid:
 # 	    --model_name mrm8488/t5-base-finetuned-question-generation-ap \
 # 	    --device cuda:2
 
+rerank_contriever_baseline:
+	python3 dense_retrieval/rerank_contriever.py \
+	    --q_encoder_path models/ckpt/start-contriever-ms-B160-A0.1/checkpoint-20000/ \
+	    --d_encoder_path /home/jhju/models/contriever-msmarco/ \
+	    --device cuda:2 \
+	    --batch_size 8 \
+	    --run runs/ikat.test.bm25.run \
+	    --query data/ikat/2023_test_topics.json \
+	    --rewritten data/ikat/ikat.test.t5ntr_history_3-3.jsonl \
+	    --collection_dir /tmp2/trec/ikat/data/collection/ikat/ \
+	    --output_run runs/ikat.test.bm25.contriever.run

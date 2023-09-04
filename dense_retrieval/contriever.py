@@ -28,7 +28,7 @@ class ContrieverDocumentEncoder(DocumentEncoder):
         self.device = device
         self.model = Contriever.from_pretrained(model_name)
         self.model.to(self.device)
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name or model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name or tokenizer_name)
 
     def encode(self, texts=None, titles=None, contents=None, max_length=256, **kwargs):
         if texts is None:
@@ -57,10 +57,10 @@ class ContrieverQueryEncoder(QueryEncoder):
         self.model.to(self.device)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name or tokenizer_name)
 
-    def encode(self, query: str, **kwargs):
+    def encode(self, query: str, max_length: int = 64, **kwargs):
         inputs = self.tokenizer(
             [query],
-            max_length=64,
+            max_length=max_length,
             padding='longest',
             truncation=True,
             add_special_tokens=True,
