@@ -5,7 +5,7 @@ from tqdm import tqdm
 import json
 import argparse
 from tool import (
-    load_collections, 
+    load_collection,
     batch_iterator, 
     get_ikat_dataset
 )
@@ -15,11 +15,22 @@ from contriever import (
 )
 from collections import defaultdict
 
+def rerank_ptkbs(star_queries, docs, q_encoder, d_encoder):
+    d_embs = d_encoder.encode(docs)
+    scores = []
+    for i, star_query in enumerate(star_queries):
+        query = star_query[0]
+        q_embs = np.array([
+            q_encoder.encode(f"{query} [SEP] {statement}") for statement in star_query[1]
+        ])
+        scores.append(np.mean(q_embs * d_embs[i], 0).sum())
+    return np.array(scores).flatten().tolist()
+
 def rerank(queries, docs, q_encoder, d_encoder):
     q_embs = np.array([q_encoder.encode(q) for q in queries])
     d_embs = d_encoder.encode(docs)
     scores = np.matmul(q_embs, d_embs.T).diagonal()
-    return scores
+    return scores.tolist()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -30,7 +41,7 @@ if __name__ == '__main__':
     # special args for ikat
     parser.add_argument("--run", default=None, type=str)
     parser.add_argument("--query", default=None, type=str)
-    parser.add_argument("--collection_dir", default=None, type=str)
+    parser.add_argument("--collection", default=None, type=str)
     parser.add_argument("--output_run", default=None, type=str)
     parser.add_argument("--rewritten", default=None, type=str)
     parser.add_argument("--concat_ptkb", default=False, action='store_true')
@@ -44,10 +55,10 @@ if __name__ == '__main__':
     dataset = get_ikat_dataset(args.query, rewritten_path=args.rewritten)
     ## rewritten or utterance
     if args.concat_ptkb:
-        query = {x['id']: [x['Question'], x['all_ptkbs']] for x in dataset}
+        query = {x['id']: (x['Question'], x['all_ptkbs']) for x in dataset}
     else:
         query = {x['id']: x['Question'] for x in dataset}
-    collections = load_collections(args.collection_dir, full=True)
+    collections = load_collection(args.collection)
     run_lines = open(args.run).readlines()
     ranking_list = defaultdict(list)
 
@@ -63,10 +74,13 @@ if __name__ == '__main__':
         documents = [collections[docid] for docid in docids]
 
         # rerank
-        rel_scores = rerank(queries, documents, query_encoder, doc_encoder)
+        if args.concat_ptkb:
+            rel_scores = rerank_ptkbs(queries, documents, query_encoder, doc_encoder)
+        else:
+            rel_scores = rerank(queries, documents, query_encoder, doc_encoder)
 
         for qid, docid, score in zip(qids, docids, rel_scores):
-            ranking_list[qid].append( (docid, score) )
+            ranking_list[qid].append( (docid, float(score)) )
 
     # write output
     fout = open(args.output_run, 'w')
@@ -76,7 +90,7 @@ if __name__ == '__main__':
         )
 
         for idx, (docid, score) in enumerate(candidate_passage_list):
-            example = f'{qid} Q0 {docid} {str(idx+1)} {score} {args.prefix}\n'
+            example = f'{qid} Q0 {docid} {str(idx+1)} {score} BM25-DR\n'
             fout.write(example)
 
     fout.close()

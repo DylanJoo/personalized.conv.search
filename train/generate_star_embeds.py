@@ -51,7 +51,6 @@ if __name__ == '__main__':
                     starter_texts.append(template.format(
                         question, args.sep_token, ""
                     ))
-                print('2', len(starter_texts))
 
                 ## get embeddings
                 ### tokenizaetion

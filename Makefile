@@ -2,18 +2,24 @@
 CLUEWEB=/tmp2/trec/ikat/indexes/clueweb_ikat/
 ssearch_ikat_train:
 	python3 sparse_retrieval/bm25_ikat.py \
-	    --k 1000 --k1 0.9 --b 0.4 \
+	    --k 100 --k1 0.9 --b 0.4 \
 	    --index ${CLUEWEB} \
 	    --output runs/ikat.train.bm25.run \
 	    --rewritten data/ikat/kat.train.t5ntr_history_3-3.jsonl \
 	    --topic data/ikat/2023_train_topics.json
 
 ssearch_ikat_test:
+	# python3 sparse_retrieval/bm25_ikat.py \
+	#     --k 100 --k1 0.9 --b 0.4 \
+	#     --index ${CLUEWEB} \
+	#     --output runs/ikat.test.bm25.run \
+	#     --rewritten data/ikat/ikat.test.t5ntr_history_3-3.jsonl \
+	#     --topic data/ikat/2023_test_topics.json
 	python3 sparse_retrieval/bm25_ikat.py \
-	    --k 1000 --k1 0.9 --b 0.4 \
+	    --k 100 --k1 0.9 --b 0.4 \
 	    --index ${CLUEWEB} \
-	    --output runs/ikat.test.bm25.run \
-	    --rewritten data/ikat/kat.test.t5ntr_history_3-3.jsonl \
+	    --output runs/ikat.test.function.bm25.run \
+	    --rewritten data/ikat/ikat.test.function_flat_sep_history_10.jsonl \
 	    --topic data/ikat/2023_test_topics.json
 
 index_ikat_clueweb:
@@ -157,10 +163,22 @@ train_start_contriever:
 	        --alpha ${ALPHA}
 
 precompute_star_embeds:
+	# the model is incorrect
 	python3 train/generate_star_embeds.py \
      		--model_name_or_path DylanJHJ/gtr-t5-base \
 		--input_jsonl data/start/train_starter.jsonl \
 		--output_jsonl data/start/temp.jsonl \
+		--max_num_statements 10 \
+		--min_num_statements 5 \
+	        --max_length 64 \
+		--device 'cuda:1' \
+		--sep_token '</s>'
+
+precompute_star_embeds_ikat_test:
+	python3 train/generate_star_embeds.py \
+     		--model_name_or_path models/ckpt/gtr-base-B160-A0.1/checkpoint-20000 \
+		--input_jsonl data/ikat/provenances/C.provenance.jsonl \
+		--output_jsonl data/ikat/provenances/C.provenance.star_embeds.jsonl \
 		--max_num_statements 10 \
 		--min_num_statements 5 \
 	        --max_length 64 \
@@ -243,41 +261,191 @@ train_starter_fid:
 # 	    --device cuda:2
 
 rerank_contriever_baseline:
+	# python3 dense_retrieval/rerank_contriever.py \
+	#     --q_encoder_path /home/jhju/models/contriever-msmarco/ \
+	#     --d_encoder_path /home/jhju/models/contriever-msmarco/ \
+	#     --device cuda \
+	#     --batch_size 16 \
+	#     --run runs/ikat.test.bm25.run \
+	#     --query data/ikat/2023_test_topics.json \
+	#     --rewritten data/ikat/ikat.test.t5ntr_history_3-3.jsonl \
+	#     --collection data/ikat/clueweb.jsonl \
+	#     --output_run runs/ikat.test.bm25.contriever.run
+	# function
+	python3 dense_retrieval/rerank_contriever.py \
+	    --q_encoder_path /home/jhju/models/contriever-msmarco/ \
+	    --d_encoder_path /home/jhju/models/contriever-msmarco/ \
+	    --device cuda \
+	    --batch_size 16 \
+	    --run runs/ikat.test.function.bm25.run \
+	    --query data/ikat/2023_test_topics.json \
+	    --rewritten data/ikat/ikat.test.function_flat_sep_history_10.jsonl \
+	    --collection data/ikat/clueweb.jsonl \
+	    --output_run runs/ikat.test.function.bm25.contriever.run
+
+rerank_contriever_start:
 	python3 dense_retrieval/rerank_contriever.py \
 	    --q_encoder_path models/ckpt/start-contriever-ms-B160-A0.1/checkpoint-20000/ \
 	    --d_encoder_path /home/jhju/models/contriever-msmarco/ \
-	    --device cuda:1 \
-	    --batch_size 8 \
+	    --device cuda \
+	    --batch_size 16 \
 	    --run runs/ikat.test.bm25.run \
 	    --query data/ikat/2023_test_topics.json \
 	    --rewritten data/ikat/ikat.test.t5ntr_history_3-3.jsonl \
-	    --collection_dir /tmp2/trec/ikat/data/collection/ikat/ \
-	    --output_run runs/ikat.test.bm25.contriever.run
+	    --collection data/ikat/clueweb.jsonl \
+	    --output_run runs/ikat.test.bm25.start-contriever.run \
+	    --concat_ptkb
 
-# start-contriever 
+# contriever 
 prepare_submissionA:
-	python3 preprocess/merge_lists.py \
-	    --list_clueweb runs/ikat.test.bm25.run \
-	    --list_wiki runs/ikat.test.ikat.test.contriever.wiki.run \
+	python3 preprocess/prepare_submission.py \
+	    --list_clueweb runs/ikat.test.bm25.contriever.run \
+	    --list_wiki runs/ikat.test.contriever.wiki.run \
+	    --collection_clueweb data/ikat/clueweb.jsonl \
+	    --collection_wiki /tmp2/trec/ikat/data/collection/wiki/wiki_psgs_w100.tsv  \
 	    --submission_file submissions/cfda1.json \
 	    --submission_name cfda1 \
-	    --provenance_file data/ikat/provenances/A.provenance.jsonl
+	    --provenance_file data/ikat/provenances/A.provenance.jsonl \
+	    --ikat_file data/ikat/2023_test_topics.json \
+	    --rewritten_file data/ikat/ikat.test.t5ntr_history_3-3.jsonl
+
+generate_submissionA:
+	python3 train/generate_response.py \
+	    --model_name_or_path DylanJHJ/fidt5-base-nq \
+	    --tokenizer_name DylanJHJ/fidt5-base-nq \
+	    --input_jsonl data/ikat/provenances/A.provenance.jsonl \
+	    --output_jsonl data/ikat/provenances/A.response.jsonl \
+	    --rewritten data/ikat/ikat.test.t5ntr_history_3-3.jsonl \
+	    --device cuda:1
+	# add response
+	python3 preprocess/prepare_submission.py \
+	    --list_clueweb runs/ikat.test.bm25.contriever.run \
+	    --list_wiki runs/ikat.test.contriever.wiki.run \
+	    --collection_clueweb data/ikat/clueweb.jsonl \
+	    --collection_wiki /tmp2/trec/ikat/data/collection/wiki/wiki_psgs_w100.tsv  \
+	    --submission_file submissions/cfda1.json \
+	    --submission_name cfda1 \
+	    --provenance_file data/ikat/provenances/A.provenance.jsonl \
+	    --ikat_file data/ikat/2023_test_topics.json \
+	    --rewritten_file data/ikat/ikat.test.t5ntr_history_3-3.jsonl \
+	    --response_file data/ikat/provenances/A.response.jsonl
+
+generate_submissionB:
+	python3 train/generate_response.py \
+	    --model_name_or_path DylanJHJ/fidt5-base-nq \
+	    --tokenizer_name DylanJHJ/fidt5-base-nq \
+	    --input_jsonl data/ikat/provenances/B.provenance.jsonl \
+	    --output_jsonl data/ikat/provenances/B.response.jsonl \
+	    --rewritten data/ikat/ikat.test.t5ntr_history_3-3.jsonl \
+	    --device cuda
+	# add response
+	python3 preprocess/prepare_submission.py \
+	    --list_clueweb runs/ikat.test.bm25.start-contriever.run \
+	    --list_wiki runs/ikat.test.contriever.wiki.run \
+	    --collection_clueweb data/ikat/clueweb.jsonl \
+	    --collection_wiki /tmp2/trec/ikat/data/collection/wiki/wiki_psgs_w100.tsv  \
+	    --submission_file submissions/cfda2.json \
+	    --submission_name cfda2 \
+	    --provenance_file data/ikat/provenances/B.provenance.jsonl \
+	    --ikat_file data/ikat/2023_test_topics.json \
+	    --rewritten_file data/ikat/ikat.test.t5ntr_history_3-3.jsonl \
+	    --response_file data/ikat/provenances/B.response.jsonl
 
 # start-contriever 
 prepare_submissionB:
-	python3 preprocess/merge_lists.py \
-	    --list_clueweb runs/ikat.test.bm25.run \
-	    --list_wiki runs/ikat.test.start-contriever.wiki.run \
+	python3 preprocess/prepare_submission.py \
+	    --list_clueweb runs/ikat.test.bm25.start-contriever.run \
+	    --list_wiki runs/ikat.test.start-contriever.fusion.wiki.run \
+	    --collection_clueweb data/ikat/clueweb.jsonl \
+	    --collection_wiki /tmp2/trec/ikat/data/collection/wiki/wiki_psgs_w100.tsv  \
 	    --submission_file submissions/cfda2.json \
 	    --submission_name cfda2 \
-	    --provenance_file submissions_template/B.provenance.jsonl
+	    --provenance_file data/ikat/provenances/B.provenance.jsonl \
+	    --ikat_file data/ikat/2023_test_topics.json \
+	    --rewritten_file data/ikat/ikat.test.t5ntr_history_3-3.jsonl
 
-# start-contriever 
-prepare_submissionC:
-	python3 preprocess/merge_lists.py \
-	    --list_clueweb runs/ikat.test.bm25.function.run \
-	    --list_wiki runs/ikat.test.start-contriever.wiki.run \
+generate_submissionC:
+	python3 train/generate_response.py \
+	    --model_name_or_path models/ckpt/starter-fid-gtr-B32/checkpoint-20000 \
+	    --tokenizer_name DylanJHJ/fidt5-base-nq \
+	    --input_jsonl data/ikat/provenances/C.provenance.star_embeds.jsonl \
+	    --output_jsonl data/ikat/provenances/C.response.jsonl \
+	    --rewritten data/ikat/ikat.test.function_flat_sep_history_10.jsonl  \
+	    --device cuda:1
+	# add response
+	# should be rerank actually.
+	python3 preprocess/prepare_submission.py \
+	    --list_clueweb runs/ikat.test.function.bm25.run \
+	    --list_wiki runs/ikat.test.start-contriever.fusion.wiki.run \
+	    --collection_clueweb data/ikat/clueweb.jsonl \
+	    --collection_wiki /tmp2/trec/ikat/data/collection/wiki/wiki_psgs_w100.tsv  \
 	    --submission_file submissions/cfda3.json \
 	    --submission_name cfda3 \
-	    --provenance_file submissions_template/C.provenance.jsonl
+	    --provenance_file data/ikat/provenances/C.provenance.jsonl \
+	    --ikat_file data/ikat/2023_test_topics.json \
+	    --rewritten_file data/ikat/ikat.test.function_flat_sep_history_10.jsonl  \
+	    --response_file data/ikat/provenances/C.response.jsonl
+
+# function+start-contriever 
+prepare_submissionC:
+	python3 preprocess/prepare_submission.py \
+	    --list_clueweb runs/ikat.test.function.bm25.run \
+	    --list_wiki runs/ikat.test.start-contriever.fusion.wiki.run \
+	    --collection_clueweb data/ikat/clueweb.jsonl \
+	    --collection_wiki /tmp2/trec/ikat/data/collection/wiki/wiki_psgs_w100.tsv  \
+	    --submission_file submissions/cfda3.json \
+	    --submission_name cfda3 \
+	    --provenance_file data/ikat/provenances/C.provenance.jsonl \
+	    --ikat_file data/ikat/2023_test_topics.json \
+	    --rewritten_file data/ikat/ikat.test.function_flat_sep_history_10.jsonl 
+	# 
 	cp submissions/cfda3.json submissions/cfda4.json
+
+# function+bm25 fusion
+fuse_start_bm25:
+	python3 preprocess/fuse_start.py \
+	    --input_run runs/ikat.test.start-contriever.wiki.run \
+	    --output_run runs/ikat.test.start-contriever.fusion.wiki.run
+
+generate_submissionD:
+	python3 train/generate_response.py \
+	    --model_name_or_path models/ckpt/starter-fid-gtr-B32/checkpoint-20000 \
+	    --tokenizer_name DylanJHJ/fidt5-base-nq \
+	    --input_jsonl data/ikat/provenances/D.provenance.star_embeds.jsonl \
+	    --output_jsonl data/ikat/provenances/D.response.jsonl \
+	    --rewritten data/ikat/ikat.test.function_flat_sep_history_10.jsonl  \
+	    --device cuda:1
+	# add response
+	# should be rerank actually.
+	python3 preprocess/prepare_submission.py \
+	    --list_clueweb runs/ikat.test.function.bm25.run \
+	    --list_wiki runs/ikat.test.start-contriever.fusion.wiki.run \
+	    --collection_wiki /tmp2/trec/ikat/data/collection/wiki/wiki_psgs_w100.tsv  \
+	    --submission_file submissions/cfda4.json \
+	    --submission_name cfda4 \
+	    --provenance_file data/ikat/provenances/D.provenance.jsonl \
+	    --ikat_file data/ikat/2023_test_topics.json \
+	    --rewritten_file data/ikat/ikat.test.function_flat_sep_history_10.jsonl  \
+	    --response_file data/ikat/provenances/D.response.jsonl
+
+# function+start-contriever 
+prepare_submissionD:
+	# python3 preprocess/prepare_submission.py \
+	#     --list_clueweb runs/ikat.test.function.bm25.run \
+	#     --list_wiki runs/ikat.test.start-contriever.fusion.wiki.run \
+	#     --collection_wiki /tmp2/trec/ikat/data/collection/wiki/wiki_psgs_w100.tsv  \
+	#     --submission_file submissions/cfda4.json \
+	#     --submission_name cfda4 \
+	#     --provenance_file data/ikat/provenances/D.provenance.jsonl \
+	#     --ikat_file data/ikat/2023_test_topics.json \
+	#     --rewritten_file data/ikat/ikat.test.function_flat_sep_history_10.jsonl 
+	# compute start embeds
+	python3 train/generate_star_embeds.py \
+     		--model_name_or_path DylanJHJ/gtr-t5-base \
+		--input_jsonl data/ikat/provenances/D.provenance.jsonl \
+		--output_jsonl data/ikat/provenances/D.provenance.star_embeds.jsonl \
+		--max_num_statements 10 \
+		--min_num_statements 5 \
+	        --max_length 64 \
+		--device 'cuda:2' \
+		--sep_token '</s>'

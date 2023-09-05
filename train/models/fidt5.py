@@ -58,7 +58,7 @@ class FiDT5(T5ForConditionalGeneration):
         **kwargs
     ) -> Union[Tuple[torch.FloatTensor], Seq2SeqLMOutput]:
 
-        if past_key_values is not None:
+        if past_key_values is not None and isinstance(past_key_values, tuple) is False:
             if past_key_values.dim() == 3:
                 # the first token generation (from star embeddings)
                 # [NOTE] Add docstrings
@@ -121,6 +121,7 @@ class FiDT5Stack(T5Stack):
         ## transform from original batch into enuemrated batch.
         ## i.e. from (B, NL) to (BN, L) 
         attention_mask = attention_mask.view(B*N, -1)
+        _ = kwargs.pop('past_key_values', None)
 
         # Minor modifying
         ## Prefix tuning is used at decoder. 
